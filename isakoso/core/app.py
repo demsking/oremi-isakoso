@@ -24,13 +24,13 @@ from fastapi.responses import JSONResponse
 from ..api import docs
 from ..api import health
 from ..components.zigbee2mqtt import Zigbee2MQTT
-from ..mcp.server import create_mcp_server
 from ..utils.logger import configure_logging
 from .devices import DeviceRegistry
 from .mqtt import MQTTService
 from .package import APP_DESCRIPTION
 from .package import APP_NAME
 from .package import APP_VERSION
+from .server import create_mcp_server
 from .settings import Settings
 
 

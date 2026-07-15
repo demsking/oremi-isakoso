@@ -9,7 +9,7 @@ from isakoso.core.devices import DeviceCapability
 from isakoso.core.devices import DeviceRegistry
 from isakoso.core.devices import DeviceState
 from isakoso.core.devices import OperationResult
-from isakoso.mcp.server import create_mcp_server
+from isakoso.core.server import create_mcp_server
 from isakoso.core.settings import Settings
 
 
