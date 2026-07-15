@@ -1,0 +1,83 @@
+[project]
+name = "oremi-isakoso"
+version = "1.0.0b0"
+description = "MCP server for controlling Zigbee2MQTT smart home devices."
+authors = [{ name = "Sébastien Demanou", email = "demsking@gmail.com" }]
+maintainers = [{ name = "Sébastien Demanou", email = "demsking@gmail.com" }]
+license = { text = "Apache-2.0" }
+requires-python = ">=3.12"
+readme = "README.md"
+
+keywords = [
+  "mcp",
+  "model-context-protocol",
+  "smart-home",
+  "home-automation",
+  "zigbee",
+  "zigbee2mqtt",
+  "iot",
+  "mqtt",
+  "ai",
+  "llm",
+  "agent",
+  "oremi",
+]
+
+classifiers = [
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Natural Language :: English",
+  "Natural Language :: French",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+  "fastapi[standard]>=0.115.0,<1.0.0",
+  "uvicorn>=0.34.0,<1.0.0",
+  "paho-mqtt>=2.1.0,<3.0.0",
+  "pydantic>=2.10.0,<3.0.0",
+  "pydantic-settings>=2.14.2",
+  "mcp>=1.28.1",
+]
+
+[project.urls]
+"Say Thanks!" = "https://www.buymeacoffee.com/demsking"
+"Source" = "https://gitlab.com/demsking/oremi-isakoso"
+"Tracker" = "https://gitlab.com/demsking/oremi-isakoso/-/issues"
+"Documentation" = "https://gitlab.com/demsking/oremi-isakoso/-/blob/main/README.md"
+
+[project.scripts]
+oremi-isakoso = "isakoso.__main__:start"
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.0",
+  "pytest>=9.1.1",
+  "pytest-asyncio>=1.0.0",
+  "ruff>=0.12.0",
+  "twine>=6.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["isakoso"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+indent-width = 2
+
+[tool.ruff.format]
+indent-style = "space"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008", "I001"]

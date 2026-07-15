@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "isakoso:app",
+        "--reload",
+        "--reload-dir",
+        "isakoso",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "5089"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env.example",
+      "env": {
+        "OREMI_ISAKOSO_LOG_LEVEL": "DEBUG",
+        "OREMI_ISAKOSO_MQTT_BROKER": "ngaoundere",
+        "OREMI_ISAKOSO_MQTT_PORT": "51883",
+        "OREMI_ISAKOSO_OLLAMA_BASE_URL": "http://localhost:31434",
+        "OREMI_ISAKOSO_ISINMI_URL": "http://localhost:37337",
+        "OREMI_ISAKOSO_OJO_URL": "http://localhost:31777",
+        "OREMI_ISAKOSO_REDIYO_URL": "http://localhost:39170",
+        "OREMI_ISAKOSO_KANSA_URL": "http://localhost:34940"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Pytest",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "tests",
+        "-v"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env.example",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
