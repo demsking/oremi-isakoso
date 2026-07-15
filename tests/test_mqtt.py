@@ -63,7 +63,7 @@ def test_subscribe_and_unsubscribe_are_logged(caplog):
   settings = Settings(mqtt_broker=None)
   service = MQTTService(settings)
 
-  with caplog.at_level(logging.INFO, logger="isakoso.core.mqtt"):
+  with caplog.at_level(logging.DEBUG, logger="isakoso.core.mqtt"):
     service.subscribe("zigbee/devices", lambda payload: None)
     service.unsubscribe("zigbee/devices")
 

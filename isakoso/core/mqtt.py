@@ -105,7 +105,7 @@ class MQTTService:
       self.client.subscribe(topic)
       broker_subscription = "active"
 
-    logger.info(f"MQTT handler subscribed: topic={topic} broker_subscription={broker_subscription}")
+    logger.debug(f"MQTT handler subscribed: topic={topic} broker_subscription={broker_subscription}")
 
   def unsubscribe(self, topic: str) -> None:
     handler_registered = self.message_handlers.pop(topic, None) is not None
@@ -115,7 +115,7 @@ class MQTTService:
       self.client.unsubscribe(topic)
       broker_subscription = "removed"
 
-    logger.info(
+    logger.debug(
       f"MQTT handler unsubscribed: topic={topic} handler_registered={handler_registered} "
       f"broker_subscription={broker_subscription}"
     )

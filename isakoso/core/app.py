@@ -62,23 +62,6 @@ def create_app(settings: Settings) -> FastAPI:
     logger.info(f"{APP_NAME} v{APP_VERSION}")
     log_startup_settings(settings)
 
-    logger.info(
-      "App settings [server]: host=%s port=%s api_prefix=%s", settings.server_host, settings.server_port, settings.api_prefix
-    )
-    logger.info(
-      "App settings [mqtt]: enabled=%s broker=%s port=%s client_id=%s authentication_configured=%s tls=%s ca_certificate=%s keepalive=%ss",
-      settings.is_mqtt_enabled,
-      settings.mqtt_broker,
-      settings.mqtt_port,
-      settings.mqtt_client_id or "automatic",
-      bool(settings.mqtt_username and settings.mqtt_password),
-      settings.mqtt_tls_enabled,
-      settings.mqtt_tls_ca_cert or "system/default",
-      settings.mqtt_keepalive,
-    )
-    logger.info("App settings [logging]: level=%s destination=%s", settings.log_level, settings.log_file or "stderr")
-    logger.info(f"Zigbee {'enabled' if settings.is_mqtt_enabled else 'disabled'}")
-
     app.state.mqtt = mqtt
     app.state.zigbee = zigbee
     app.state.device_registry = device_registry
