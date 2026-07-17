@@ -84,10 +84,6 @@ configured environment variables.
 - `-h`, `--help`: Display the command-line help and exit.
 - `-v`, `--version`: Display the installed version and exit.
 
-All server configuration, including the listening address, port, LLM backend,
-and service endpoints, is provided through environment variables rather than
-command-line options.
-
 ### Docker Image
 
 The [`demsking/oremi-isakoso`](https://hub.docker.com/r/demsking/oremi-isakoso)

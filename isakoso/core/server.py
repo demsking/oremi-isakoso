@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from enum import Enum
 from typing import Annotated
 from typing import Any
 
@@ -26,6 +27,11 @@ from ..core.devices import DeviceState
 from ..core.devices import OperationResult
 from ..core.devices import SensorReading
 from ..core.devices import UnsupportedOperationError
+
+
+class Provider(str, Enum):
+  ZIGBEE2MQTT = "zigbee2mqtt"
+
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True)
 MUTATION = ToolAnnotations(destructiveHint=False)
@@ -47,12 +53,13 @@ def create_mcp_server(registry: DeviceRegistry) -> FastMCP:
   @server.tool(annotations=READ_ONLY)
   async def list_devices(
     provider: Annotated[
-      str | None,
+      Provider | None,
       Field(description="Optional provider filter, for example zigbee2mqtt. Omit to query every provider."),
     ] = None,
   ) -> list[Device]:
     """List devices and their readable and writable capabilities."""
-    return await registry.list_devices(provider)
+    provider_val = provider.value if provider is not None else None
+    return await registry.list_devices(provider_val)
 
   @server.tool(annotations=READ_ONLY)
   async def get_device(

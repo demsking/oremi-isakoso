@@ -74,6 +74,12 @@ async def test_mcp_exposes_complete_discoverable_tool_contract(mcp_server):
   assert brightness.inputSchema["properties"]["brightness"]["maximum"] == 100
   assert brightness.outputSchema is not None
 
+  list_devices_tool = next(tool for tool in tools if tool.name == "list_devices")
+  provider_schema = list_devices_tool.inputSchema["properties"]["provider"]
+  # Ensure the provider schema references the Provider Enum definitions and can be null
+  assert any("$ref" in sub and "Provider" in sub["$ref"] for sub in provider_schema.get("anyOf", []))
+  assert list_devices_tool.inputSchema["$defs"]["Provider"]["enum"] == ["zigbee2mqtt"]
+
 
 @pytest.mark.asyncio
 async def test_mcp_tools_return_structured_results(mcp_server):

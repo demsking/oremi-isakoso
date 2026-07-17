@@ -21,12 +21,7 @@
       "env": {
         "OREMI_ISAKOSO_LOG_LEVEL": "DEBUG",
         "OREMI_ISAKOSO_MQTT_BROKER": "ngaoundere",
-        "OREMI_ISAKOSO_MQTT_PORT": "51883",
-        "OREMI_ISAKOSO_OLLAMA_BASE_URL": "http://localhost:31434",
-        "OREMI_ISAKOSO_ISINMI_URL": "http://localhost:37337",
-        "OREMI_ISAKOSO_OJO_URL": "http://localhost:31777",
-        "OREMI_ISAKOSO_REDIYO_URL": "http://localhost:39170",
-        "OREMI_ISAKOSO_KANSA_URL": "http://localhost:34940"
+        "OREMI_ISAKOSO_MQTT_PORT": "51883"
       },
       "console": "integratedTerminal",
       "justMyCode": false
