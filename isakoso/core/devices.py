@@ -14,6 +14,7 @@
 # ==============================================================================
 from __future__ import annotations
 
+import re
 from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
@@ -113,6 +114,93 @@ class ColorValue(BaseModel):
     raise ValueError("color requires either hex or all red, green, and blue channels")
 
 
+def _tokenize(text: str | None) -> list[str]:
+  if not text:
+    return []
+  normalized = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
+  return [t for t in normalized.split() if t]
+
+
+class DeviceSearchIndex:
+  """An in-memory search index for devices offering tokenized, weighted search."""
+
+  def __init__(self, devices: list[Device]) -> None:
+    self.devices = devices
+    self._index = []
+    for device in devices:
+      # Map field names to their tokenized values
+      fields = {
+        "name": _tokenize(device.name),
+        "id": _tokenize(device.id),
+        "model": _tokenize(device.model),
+        "manufacturer": _tokenize(device.manufacturer),
+        "provider": _tokenize(device.provider),
+        "cap_property": [t for cap in device.capabilities for t in _tokenize(cap.property)],
+        "cap_type": [t for cap in device.capabilities for t in _tokenize(cap.type)],
+        "cap_desc": [t for cap in device.capabilities for t in _tokenize(cap.description)],
+      }
+      self._index.append((device, fields))
+
+  def search(self, query: str) -> list[Device]:
+    query_tokens = _tokenize(query)
+    if not query_tokens:
+      return []
+
+    results = []
+    # Weights for different fields
+    weights = {
+      "name": 10,
+      "id": 8,
+      "model": 5,
+      "manufacturer": 4,
+      "provider": 3,
+      "cap_property": 3,
+      "cap_type": 1,
+      "cap_desc": 1,
+    }
+
+    for device, fields in self._index:
+      device_matches_all_query_tokens = True
+      device_score = 0
+
+      for q_token in query_tokens:
+        token_matched = False
+        best_token_score = 0
+
+        # Check each field for matches with this query token
+        for field_name, tokens in fields.items():
+          field_weight = weights[field_name]
+          for token in tokens:
+            if q_token == token:
+              # Exact match
+              score = field_weight * 3
+              best_token_score = max(best_token_score, score)
+              token_matched = True
+            elif token.startswith(q_token):
+              # Prefix match
+              score = field_weight * 2
+              best_token_score = max(best_token_score, score)
+              token_matched = True
+            elif q_token in token:
+              # Substring match
+              score = field_weight * 1
+              best_token_score = max(best_token_score, score)
+              token_matched = True
+
+        if not token_matched:
+          device_matches_all_query_tokens = False
+          break
+
+        device_score += best_token_score
+
+      if device_matches_all_query_tokens:
+        results.append((device, device_score))
+
+    # Sort results by score (descending), then by name (ascending)
+    results.sort(key=lambda item: (-item[1], item[0].name))
+    return [item[0] for item in results]
+
+
 @runtime_checkable
 class DeviceProvider(Protocol):
   """Extension point implemented by Zigbee2MQTT, Matter, Z-Wave, Wi-Fi, and BLE adapters."""
@@ -127,6 +215,7 @@ class DeviceProvider(Protocol):
 
 class DeviceRegistry:
   """Routes provider-neutral operations to independently pluggable providers."""
+
 
   def __init__(self) -> None:
     self._providers: dict[str, DeviceProvider] = {}
@@ -169,3 +258,8 @@ class DeviceRegistry:
 
   async def execute_action(self, device_id: str, action: str, value: Any = None) -> OperationResult:
     return await self.provider_for(device_id).execute_action(device_id, action, value)
+
+  async def search_devices(self, query: str) -> list[Device]:
+    devices = await self.list_devices()
+    index = DeviceSearchIndex(devices)
+    return index.search(query)

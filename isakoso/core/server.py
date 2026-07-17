@@ -62,6 +62,16 @@ def create_mcp_server(registry: DeviceRegistry) -> FastMCP:
     return await registry.list_devices(provider_val)
 
   @server.tool(annotations=READ_ONLY)
+  async def search_devices(
+    query: Annotated[
+      str,
+      Field(description="Search query to match against device names, IDs, models, manufacturers, and capability fields."),
+    ],
+  ) -> list[Device]:
+    """Search for devices using an accurate search index."""
+    return await registry.search_devices(query)
+
+  @server.tool(annotations=READ_ONLY)
   async def get_device(
     device_id: Annotated[str, Field(description="Provider-scoped id returned by list_devices.")],
   ) -> Device:

@@ -188,6 +188,7 @@ identifier, such as `zigbee2mqtt:Living room`, in subsequent calls.
 ## Tools
 
 - `list_devices(provider?)`: discover devices and readable/writable capabilities.
+- `search_devices(query)`: search for devices using an accurate search index.
 - `get_device(device_id)`: inspect one device and its capability constraints.
 - `get_device_state(device_id)`: read the latest state received over MQTT.
 - `turn_on`, `turn_off`, `toggle`: control switchable devices.
