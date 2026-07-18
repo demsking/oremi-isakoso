@@ -34,6 +34,7 @@ from isakoso.core.settings import Settings
 from isakoso.server.prompts import register_mcp_prompts
 from isakoso.server.resources import register_mcp_resources
 from isakoso.server.tools import register_mcp_tools
+from isakoso.utils.context import set_app_context_mqtt
 from isakoso.utils.logger import configure_logging
 
 
@@ -51,6 +52,7 @@ def log_startup_settings(settings: Settings) -> None:
 def create_app(settings: Settings) -> FastAPI:
   mqtt = MQTTService(settings)
   zigbee = Zigbee2MQTT(mqtt, settings.zigbee2mqtt_topic_prefix)
+
   device_registry = DeviceRegistry()
   device_registry.register(zigbee)
 
@@ -63,6 +65,8 @@ def create_app(settings: Settings) -> FastAPI:
 
     logger.info(f"{APP_NAME} v{APP_VERSION}")
     log_startup_settings(settings)
+
+    set_app_context_mqtt(app, mqtt)
 
     zigbee_started = False
 

@@ -19,8 +19,8 @@ from fastapi import Request
 from pydantic import BaseModel
 from pydantic import Field
 
-from isakoso.core.mqtt import MQTTService
 from isakoso.core.package import APP_VERSION
+from isakoso.utils.context import get_app_context_mqtt
 
 
 API_TAG_METADATA = {
@@ -39,10 +39,6 @@ class ServerStatus(BaseModel):
   status: Literal["ok", "degraded"] = Field()
   version: str = Field(..., description="Version of the application.")
   mqtt: str = Field(..., description="MQTT connection status.")
-
-
-def mqtt_service(request: Request) -> MQTTService:
-  return request.app.state.mqtt
 
 
 @router.get(
@@ -70,10 +66,10 @@ def mqtt_service(request: Request) -> MQTTService:
   },
 )
 async def health(request: Request) -> ServerStatus:
-  mqtt_connected = mqtt_service(request).connected
+  mqtt = get_app_context_mqtt(request)
 
   return ServerStatus(
-    status="ok" if mqtt_connected else "degraded",
+    status="ok" if mqtt.connected else "degraded",
     version=APP_VERSION,
-    mqtt="connected" if mqtt_connected else "disconnected",
+    mqtt="connected" if mqtt.connected else "disconnected",
   )
