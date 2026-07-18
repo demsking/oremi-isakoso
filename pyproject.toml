@@ -44,10 +44,9 @@ dependencies = [
 
 [project.urls]
 "Say Thanks!" = "https://www.buymeacoffee.com/demsking"
+"Documentation" = "https://demsking.gitlab.io/oremi-isakoso"
 "Source" = "https://gitlab.com/demsking/oremi-isakoso"
 "Tracker" = "https://gitlab.com/demsking/oremi-isakoso/-/issues"
-"Repository" = "https://gitlab.com/demsking/oremi-isakoso/-/blob/main/README.md"
-"Documentation" = "https://demsking.gitlab.io/oremi-isakoso"
 
 [project.scripts]
 oremi-isakoso = "isakoso.__main__:start"

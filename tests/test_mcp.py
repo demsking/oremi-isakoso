@@ -10,9 +10,9 @@ from isakoso.core.devices import DeviceRegistry
 from isakoso.core.devices import DeviceState
 from isakoso.core.devices import OperationResult
 from mcp.server.fastmcp import FastMCP
-from isakoso.server.tools import register_mcp_tools
-from isakoso.server.prompts import register_mcp_prompts
-from isakoso.server.resources import register_mcp_resources
+from isakoso.mcp.tools import register_mcp_tools
+from isakoso.mcp.prompts import register_mcp_prompts
+from isakoso.mcp.resources import register_mcp_resources
 from isakoso.core.settings import Settings
 
 

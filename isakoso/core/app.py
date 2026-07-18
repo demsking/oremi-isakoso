@@ -31,9 +31,9 @@ from isakoso.core.package import APP_DOCUMENTATION_URL
 from isakoso.core.package import APP_NAME
 from isakoso.core.package import APP_VERSION
 from isakoso.core.settings import Settings
-from isakoso.server.prompts import register_mcp_prompts
-from isakoso.server.resources import register_mcp_resources
-from isakoso.server.tools import register_mcp_tools
+from isakoso.mcp.prompts import register_mcp_prompts
+from isakoso.mcp.resources import register_mcp_resources
+from isakoso.mcp.tools import register_mcp_tools
 from isakoso.utils.context import set_app_context_mqtt
 from isakoso.utils.logger import configure_logging
 
@@ -79,15 +79,15 @@ def create_app(settings: Settings) -> FastAPI:
       else:
         logger.info("Zigbee startup skipped: MQTT is disabled")
 
-      ready = True
-      logger.info(
-        f"Oremi Iṣakoso ready: "
-        f"mqtt={'connected' if mqtt_ready else 'disabled'} "
-        f"duration_ms={(perf_counter() - startup_started) * 1000:.1f}"
-      )
-
       _ = mcp.streamable_http_app()
       async with mcp.session_manager.run():
+        ready = True
+        logger.info(
+          f"Oremi Iṣakoso ready: "
+          f"mqtt={'connected' if mqtt_ready else 'disabled'} "
+          f"duration_ms={(perf_counter() - startup_started) * 1000:.1f}"
+        )
+
         yield
     finally:
       shutdown_started = perf_counter()

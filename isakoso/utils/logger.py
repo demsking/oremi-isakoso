@@ -26,7 +26,7 @@ LOGGER_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 def configure_logging(level: str, log_file: str | None) -> None:
   """Configure console and rotating file logging."""
 
-  fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s" if level == "DEBUG" else LOGGER_FORMAT
+  fmt = "%(name)s - %(levelname)s - %(message)s" if level == "DEBUG" else LOGGER_FORMAT
   formatter = logging.Formatter(fmt=fmt, datefmt=LOGGER_DATE_FORMAT)
 
   root = logging.getLogger()
