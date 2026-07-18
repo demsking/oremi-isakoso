@@ -21,7 +21,7 @@ from concurrent.futures import Future
 
 import paho.mqtt.client as mqtt
 
-from .settings import Settings
+from isakoso.core.settings import Settings
 
 
 logger = logging.getLogger(__name__)

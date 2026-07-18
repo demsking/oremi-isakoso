@@ -39,13 +39,15 @@ dependencies = [
   "pydantic>=2.10.0,<3.0.0",
   "pydantic-settings>=2.14.2",
   "mcp>=1.28.1",
+  "rapidfuzz>=3.14.5",
 ]
 
 [project.urls]
 "Say Thanks!" = "https://www.buymeacoffee.com/demsking"
 "Source" = "https://gitlab.com/demsking/oremi-isakoso"
 "Tracker" = "https://gitlab.com/demsking/oremi-isakoso/-/issues"
-"Documentation" = "https://gitlab.com/demsking/oremi-isakoso/-/blob/main/README.md"
+"Repository" = "https://gitlab.com/demsking/oremi-isakoso/-/blob/main/README.md"
+"Documentation" = "https://demsking.gitlab.io/oremi-isakoso"
 
 [project.scripts]
 oremi-isakoso = "isakoso.__main__:start"

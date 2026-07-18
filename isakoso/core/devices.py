@@ -22,6 +22,7 @@ from typing import runtime_checkable
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from rapidfuzz import fuzz
 
 
 class DeviceError(RuntimeError):
@@ -114,6 +115,103 @@ class ColorValue(BaseModel):
     raise ValueError("color requires either hex or all red, green, and blue channels")
 
 
+@runtime_checkable
+class DeviceProvider(Protocol):
+  """Extension point implemented by Zigbee2MQTT, Matter, Z-Wave, Wi-Fi, and BLE adapters."""
+
+  provider_id: str
+
+  async def list_devices(self) -> list[Device]: ...
+  async def get_device(self, device_id: str) -> Device: ...
+  async def get_device_state(self, device_id: str) -> DeviceState: ...
+  async def execute_action(self, device_id: str, action: str, value: Any) -> OperationResult: ...
+
+
+_STOP_WORDS = {
+  # French stop words
+  "de",
+  "la",
+  "le",
+  "les",
+  "un",
+  "une",
+  "des",
+  "du",
+  "en",
+  "dans",
+  "par",
+  "pour",
+  "avec",
+  "et",
+  "ou",
+  "sur",
+  "sous",
+  "ce",
+  "cette",
+  "ces",
+  "mon",
+  "ma",
+  "mes",
+  "ton",
+  "ta",
+  "tes",
+  "son",
+  "sa",
+  "ses",
+  "notre",
+  "votre",
+  "leur",
+  "nos",
+  "vos",
+  "leurs",
+  "au",
+  "aux",
+  "d",
+  "l",
+  # English stop words
+  "of",
+  "the",
+  "a",
+  "an",
+  "in",
+  "on",
+  "at",
+  "for",
+  "to",
+  "and",
+  "or",
+  "with",
+  "by",
+  "from",
+  "up",
+  "about",
+  "into",
+  "over",
+  "after",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "my",
+  "your",
+  "his",
+  "her",
+  "its",
+  "our",
+  "their",
+}
+
+
+def _tokenize_with_accents(text: str | None) -> list[str]:
+  if not text:
+    return []
+  normalized = re.sub(r"[^a-zA-Z0-9àâäéèêëîïôöùûüç]", " ", text.lower())
+  return [t for t in normalized.split() if t]
+
+
 def _tokenize(text: str | None) -> list[str]:
   if not text:
     return []
@@ -201,21 +299,8 @@ class DeviceSearchIndex:
     return [item[0] for item in results]
 
 
-@runtime_checkable
-class DeviceProvider(Protocol):
-  """Extension point implemented by Zigbee2MQTT, Matter, Z-Wave, Wi-Fi, and BLE adapters."""
-
-  provider_id: str
-
-  async def list_devices(self) -> list[Device]: ...
-  async def get_device(self, device_id: str) -> Device: ...
-  async def get_device_state(self, device_id: str) -> DeviceState: ...
-  async def execute_action(self, device_id: str, action: str, value: Any) -> OperationResult: ...
-
-
 class DeviceRegistry:
   """Routes provider-neutral operations to independently pluggable providers."""
-
 
   def __init__(self) -> None:
     self._providers: dict[str, DeviceProvider] = {}
@@ -223,31 +308,40 @@ class DeviceRegistry:
   def register(self, provider: DeviceProvider) -> None:
     if provider.provider_id in self._providers:
       raise ValueError(f"device provider already registered: {provider.provider_id}")
+
     self._providers[provider.provider_id] = provider
 
   async def list_devices(self, provider: str | None = None) -> list[Device]:
     if provider is not None:
       selected = self._providers.get(provider)
+
       if selected is None:
         raise DeviceNotFoundError(f"unknown device provider: {provider}")
+
       return await selected.list_devices()
 
     devices: list[Device] = []
+
     for selected in self._providers.values():
       devices.extend(await selected.list_devices())
+
     return devices
 
   def provider_for(self, device_id: str) -> DeviceProvider:
     provider_id, separator, _ = device_id.partition(":")
+
     if separator:
       provider = self._providers.get(provider_id)
+
       if provider is not None:
         return provider
+
       raise DeviceNotFoundError(f"unknown device provider in id: {device_id}")
 
     # Native names remain accepted while only one provider is installed.
     if len(self._providers) == 1:
       return next(iter(self._providers.values()))
+
     raise DeviceNotFoundError("device_id must be provider-scoped, for example zigbee2mqtt:living-room")
 
   async def get_device(self, device_id: str) -> Device:
@@ -260,6 +354,73 @@ class DeviceRegistry:
     return await self.provider_for(device_id).execute_action(device_id, action, value)
 
   async def search_devices(self, query: str) -> list[Device]:
+    """Extract devices whose names are mentioned in the text, allowing for typo errors."""
     devices = await self.list_devices()
-    index = DeviceSearchIndex(devices)
-    return index.search(query)
+    text_tokens = _tokenize_with_accents(query)
+    if not text_tokens:
+      return []
+
+    matched_devices = []
+    for device in devices:
+      name_tokens = _tokenize_with_accents(device.name)
+      K = len(name_tokens)
+      if K == 0:
+        continue
+
+      # Filter out stop words for content-matching
+      content_tokens = [t for t in name_tokens if t not in _STOP_WORDS]
+      if not content_tokens:
+        content_tokens = name_tokens
+
+      # Find how many content words have a high-similarity match in the input text
+      matched_content_count = 0
+      for ct in content_tokens:
+        for tt in text_tokens:
+          if fuzz.ratio(ct, tt) >= 80.0:
+            matched_content_count += 1
+            break
+
+      match_ratio = matched_content_count / len(content_tokens)
+      required_ratio = 1.0 if len(content_tokens) == 1 else 0.6
+
+      # Check the last word/penultimate word of the device name specifically
+      last_word_ok = False
+      check_words = [name_tokens[-1]]
+      if len(name_tokens) >= 2 and name_tokens[-1].isdigit():
+        check_words.append(name_tokens[-2])
+
+      for cw in check_words:
+        for tt in text_tokens:
+          if fuzz.ratio(cw, tt) >= 80.0:
+            last_word_ok = True
+            break
+        if last_word_ok:
+          break
+
+      # Compute overall sliding window match ratio for ranking
+      best_ratio = 0.0
+      min_size = max(1, K - 1)
+      if K >= 3:
+        min_size = max(1, K - 2)
+
+      for w_size in range(min_size, min(len(text_tokens) + 1, K + 2)):
+        for i in range(len(text_tokens) - w_size + 1):
+          window = text_tokens[i : i + w_size]
+          window_str = " ".join(window)
+          name_str = " ".join(name_tokens)
+          ratio = fuzz.ratio(window_str, name_str)
+          if ratio > best_ratio:
+            best_ratio = ratio
+
+      if match_ratio >= required_ratio and last_word_ok:
+        matched_devices.append((device, best_ratio))
+
+    matched_devices.sort(key=lambda x: (-x[1], x[0].name))
+
+    results = [device for device, _ in matched_devices]
+
+    if not results:
+      index = DeviceSearchIndex(devices)
+      return index.search(query)
+
+    return results

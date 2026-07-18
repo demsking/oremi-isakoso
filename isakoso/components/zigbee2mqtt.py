@@ -23,13 +23,13 @@ from typing import Any
 
 import paho.mqtt.client as mqtt
 
-from ..core.devices import Device
-from ..core.devices import DeviceCapability
-from ..core.devices import DeviceNotFoundError
-from ..core.devices import DeviceState
-from ..core.devices import OperationResult
-from ..core.devices import UnsupportedOperationError
-from ..core.mqtt import MQTTService
+from isakoso.core.devices import Device
+from isakoso.core.devices import DeviceCapability
+from isakoso.core.devices import DeviceNotFoundError
+from isakoso.core.devices import DeviceState
+from isakoso.core.devices import OperationResult
+from isakoso.core.devices import UnsupportedOperationError
+from isakoso.core.mqtt import MQTTService
 
 DEVICES_TOPIC = "zigbee2mqtt/bridge/devices"
 DEVICE_MATCH_THRESHOLD = 0.72

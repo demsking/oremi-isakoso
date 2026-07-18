@@ -17,8 +17,8 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 
-from ..core.package import PROJECT_DIRECTORY
-from ..core.package import STATIC_DIR
+from isakoso.core.package import PROJECT_DIRECTORY
+from isakoso.core.package import STATIC_DIR
 
 router = APIRouter(prefix="/docs")
 

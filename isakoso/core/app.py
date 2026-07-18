@@ -14,24 +14,27 @@
 # ==============================================================================
 import logging
 from contextlib import asynccontextmanager
-from contextlib import AsyncExitStack
 from time import perf_counter
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
+from mcp.server.fastmcp import FastMCP
 
-from ..api import docs
-from ..api import health
-from ..components.zigbee2mqtt import Zigbee2MQTT
-from ..utils.logger import configure_logging
-from .devices import DeviceRegistry
-from .mqtt import MQTTService
-from .package import APP_DESCRIPTION
-from .package import APP_NAME
-from .package import APP_VERSION
-from .server import create_mcp_server
-from .settings import Settings
+from isakoso.api import docs
+from isakoso.api import health
+from isakoso.components.zigbee2mqtt import Zigbee2MQTT
+from isakoso.core.devices import DeviceRegistry
+from isakoso.core.mqtt import MQTTService
+from isakoso.core.package import APP_DESCRIPTION
+from isakoso.core.package import APP_DOCUMENTATION_URL
+from isakoso.core.package import APP_NAME
+from isakoso.core.package import APP_VERSION
+from isakoso.core.settings import Settings
+from isakoso.server.prompts import register_mcp_prompts
+from isakoso.server.resources import register_mcp_resources
+from isakoso.server.tools import register_mcp_tools
+from isakoso.utils.logger import configure_logging
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +53,6 @@ def create_app(settings: Settings) -> FastAPI:
   zigbee = Zigbee2MQTT(mqtt, settings.zigbee2mqtt_topic_prefix)
   device_registry = DeviceRegistry()
   device_registry.register(zigbee)
-  mcp_server = create_mcp_server(device_registry)
 
   @asynccontextmanager
   async def lifespan(app: FastAPI):
@@ -62,17 +64,9 @@ def create_app(settings: Settings) -> FastAPI:
     logger.info(f"{APP_NAME} v{APP_VERSION}")
     log_startup_settings(settings)
 
-    app.state.mqtt = mqtt
-    app.state.zigbee = zigbee
-    app.state.device_registry = device_registry
-    app.state.mcp = mcp_server
-    app.state.settings = settings
-
     zigbee_started = False
-    stack = AsyncExitStack()
 
     try:
-      await stack.enter_async_context(mcp_server.session_manager.run())
       mqtt_ready = await mqtt.start()
 
       if mqtt_ready:
@@ -88,7 +82,9 @@ def create_app(settings: Settings) -> FastAPI:
         f"duration_ms={(perf_counter() - startup_started) * 1000:.1f}"
       )
 
-      yield
+      _ = mcp.streamable_http_app()
+      async with mcp.session_manager.run():
+        yield
     finally:
       shutdown_started = perf_counter()
 
@@ -101,7 +97,6 @@ def create_app(settings: Settings) -> FastAPI:
         zigbee.stop()
 
       mqtt.stop()
-      await stack.aclose()
       logger.info(f"Oremi Iṣakoso stopped: duration_ms={(perf_counter() - shutdown_started) * 1000:.1f}")
 
   app = FastAPI(
@@ -124,6 +119,18 @@ def create_app(settings: Settings) -> FastAPI:
     ],
   )
 
+  mcp = FastMCP(
+    name="Oremi Iṣakoso",
+    instructions=(
+      "Discover and control smart-home devices. Call list_devices before control operations, "
+      "use the returned provider-scoped device id, and inspect capabilities before choosing a tool."
+    ),
+    stateless_http=True,
+    json_response=True,
+    streamable_http_path="/mcp",
+    website_url=APP_DOCUMENTATION_URL,
+  )
+
   @app.exception_handler(Exception)
   async def unhandled_exception_handler(_, exc: Exception) -> JSONResponse:
     logger.exception("Unhandled application error")
@@ -134,8 +141,14 @@ def create_app(settings: Settings) -> FastAPI:
     return HTMLResponse(status_code=307, headers={"Location": docs.router.prefix})
 
   prefix = "" if settings.api_prefix == "/" else settings.api_prefix
+
   app.include_router(health.router, prefix=prefix)
   app.include_router(docs.router, prefix=prefix)
-  app.mount(prefix, mcp_server.streamable_http_app(), name="mcp")
+
+  register_mcp_prompts(mcp)
+  register_mcp_resources(mcp, device_registry)
+  register_mcp_tools(mcp, device_registry)
+
+  app.mount(settings.api_prefix, mcp.streamable_http_app(), name="mcp")
 
   return app

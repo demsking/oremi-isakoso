@@ -19,8 +19,8 @@ from fastapi import Request
 from pydantic import BaseModel
 from pydantic import Field
 
-from ..core.mqtt import MQTTService
-from ..core.package import APP_VERSION
+from isakoso.core.mqtt import MQTTService
+from isakoso.core.package import APP_VERSION
 
 
 API_TAG_METADATA = {

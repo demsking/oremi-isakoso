@@ -16,7 +16,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from ..core.package import APP_NAME
+from isakoso.core.package import APP_NAME
 
 
 LOGGER_FORMAT = f"%(asctime)s - {APP_NAME} - %(levelname)s - %(message)s"
