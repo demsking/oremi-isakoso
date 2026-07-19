@@ -172,20 +172,19 @@ Once started, open the interactive documentation at:
 http://localhost:35089/docs/
 ```
 
-## MCP endpoint
+## Model Context Protocol
 
-The server exposes the recommended stateless Streamable HTTP transport with JSON
-responses at:
+Oremi Isakoso implements the Model Context Protocol (MCP) using a strongly-typed
+server. It exposes its core functionality as a set of tools, resources and
+prompts that LLM agents can call directly.
 
-```text
-http://localhost:5089/mcp
+The MCP server uses the **Streamable HTTP transport** protocol and is mounted at:
+
+```txt
+/mcp
 ```
 
-When `OREMI_ISAKOSO_API_PREFIX` is configured, prepend that prefix to `/mcp`.
-Clients should call `list_devices` first and reuse the returned provider-scoped
-identifier, such as `zigbee2mqtt:Living room`, in subsequent calls.
-
-## Tools
+### Available MCP Tools
 
 - `list_devices(provider?)`: discover devices and readable/writable capabilities.
 - `search_devices(query)`: search for devices using a hybrid of natural language
@@ -203,27 +202,6 @@ identifier, such as `zigbee2mqtt:Living room`, in subsequent calls.
 
 Tool inputs and outputs have generated JSON schemas. Mutations are validated
 against the capabilities advertised by Zigbee2MQTT before MQTT publication.
-
-## Architecture
-
-```text
-MCP tools -> DeviceRegistry -> DeviceProvider
-                                  |
-                                  +-- Zigbee2MQTT -> MQTT broker
-                                  +-- Matter       (future)
-                                  +-- Z-Wave       (future)
-                                  +-- Wi-Fi / BLE  (future)
-```
-
-`Device`, `DeviceCapability`, `DeviceState`, `SensorReading`, and
-`OperationResult` are protocol-neutral Pydantic models. A new backend implements
-the `DeviceProvider` protocol and registers with `DeviceRegistry`; no MCP tool
-needs provider-specific branching.
-
-Zigbee2MQTT discovery comes from `<topic-prefix>bridge/devices`. Readable state
-is cached from each `<topic-prefix><friendly_name>` topic. Commands are validated
-and published to `<topic-prefix><friendly_name>/set`. The default topic prefix is
-`zigbee2mqtt/`.
 
 ## Configuration
 

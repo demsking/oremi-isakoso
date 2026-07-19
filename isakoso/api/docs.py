@@ -61,7 +61,7 @@ async def html_documentation():
           const isGitlabPage = location.origin.includes('gitlab.io');
 
           openapi.info.title = 'Oremi Iṣakoso Documentation';
-          openapi.info.description = "{SERVICE_DESCRIPTION}";
+          openapi.info.description = `{SERVICE_DESCRIPTION}`;
 
           if (isGitlabPage) {{
             openapi.servers = [];

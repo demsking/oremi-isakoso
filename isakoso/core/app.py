@@ -142,7 +142,7 @@ def create_app(settings: Settings) -> FastAPI:
 
   @app.get("/", include_in_schema=False)
   async def redirect_to_docs():
-    return HTMLResponse(status_code=307, headers={"Location": docs.router.prefix})
+    return HTMLResponse(status_code=307, headers={"Location": prefix + docs.router.prefix})
 
   prefix = "" if settings.api_prefix == "/" else settings.api_prefix
 
