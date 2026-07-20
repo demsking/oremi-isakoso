@@ -1,7 +1,22 @@
+# Copyright 2026 Sébastien Demanou. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from mcp.server.fastmcp import FastMCP
 
 from isakoso.core.app import create_app
 from isakoso.core.devices import Device
@@ -9,11 +24,10 @@ from isakoso.core.devices import DeviceCapability
 from isakoso.core.devices import DeviceRegistry
 from isakoso.core.devices import DeviceState
 from isakoso.core.devices import OperationResult
-from mcp.server.fastmcp import FastMCP
-from isakoso.mcp.tools import register_mcp_tools
+from isakoso.core.settings import Settings
 from isakoso.mcp.prompts import register_mcp_prompts
 from isakoso.mcp.resources import register_mcp_resources
-from isakoso.core.settings import Settings
+from isakoso.mcp.tools import register_mcp_tools
 
 
 class FakeProvider:
@@ -225,14 +239,14 @@ async def test_mcp_prompts(mcp_server):
 async def test_mcp_resources(mcp_server):
   # Test listing resources (only static ones appear in list_resources)
   resources = await mcp_server.list_resources()
-  assert {str(r.uri) for r in resources} == {"devices:///all"}
+  assert {str(r.uri) for r in resources} == {"device:///all"}
 
   # Test listing resource templates
   templates = await mcp_server.list_resource_templates()
-  assert {t.uriTemplate for t in templates} == {"devices:///{device_id}/metadata", "devices:///{device_id}/state"}
+  assert {t.uriTemplate for t in templates} == {"device:///{device_id}/metadata", "device:///{device_id}/state"}
 
-  # Test reading devices:///all resource
-  contents_all = await mcp_server.read_resource("devices:///all")
+  # Test reading device:///all resource
+  contents_all = await mcp_server.read_resource("device:///all")
   assert len(contents_all) == 1
   import json
 
@@ -240,28 +254,28 @@ async def test_mcp_resources(mcp_server):
   assert len(devices) == 1
   assert devices[0]["id"] == "fake:lamp"
 
-  # Test reading devices:///{device_id}/metadata resource
-  contents_meta = await mcp_server.read_resource("devices:///fake:lamp/metadata")
+  # Test reading device:///{device_id}/metadata resource
+  contents_meta = await mcp_server.read_resource("device:///fake:lamp/metadata")
   assert len(contents_meta) == 1
   metadata = json.loads(contents_meta[0].content)
   assert metadata["id"] == "fake:lamp"
   assert metadata["name"] == "Lamp"
 
-  # Test reading devices:///{device_id}/metadata resource with URL-encoded device ID
-  contents_meta_enc = await mcp_server.read_resource("devices:///fake%3Alamp/metadata")
+  # Test reading device:///{device_id}/metadata resource with URL-encoded device ID
+  contents_meta_enc = await mcp_server.read_resource("device:///fake%3Alamp/metadata")
   assert len(contents_meta_enc) == 1
   metadata_enc = json.loads(contents_meta_enc[0].content)
   assert metadata_enc["id"] == "fake:lamp"
 
-  # Test reading devices:///{device_id}/state resource
-  contents_state = await mcp_server.read_resource("devices:///fake:lamp/state")
+  # Test reading device:///{device_id}/state resource
+  contents_state = await mcp_server.read_resource("device:///fake:lamp/state")
   assert len(contents_state) == 1
   state = json.loads(contents_state[0].content)
   assert state["device_id"] == "fake:lamp"
   assert state["values"]["state"] == "ON"
 
-  # Test reading devices:///{device_id}/state resource with URL-encoded device ID
-  contents_state_enc = await mcp_server.read_resource("devices:///fake%3Alamp/state")
+  # Test reading device:///{device_id}/state resource with URL-encoded device ID
+  contents_state_enc = await mcp_server.read_resource("device:///fake%3Alamp/state")
   assert len(contents_state_enc) == 1
   state_enc = json.loads(contents_state_enc[0].content)
   assert state_enc["device_id"] == "fake:lamp"
