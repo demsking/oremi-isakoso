@@ -27,7 +27,7 @@ https://demsking.gitlab.io/oremi-isakoso/
 
 ## Development
 
-Oremi Device is built with Python and uses `uv` for dependency management. The
+Oremi Iṣakoso is built with Python and uses `uv` for dependency management. The
 project follows standard Python development practices with type hints, linting,
 and automated testing.
 
