@@ -15,11 +15,11 @@
 from fastapi.testclient import TestClient
 
 from isakoso import app
-from isakoso.core.package import STATIC_DIR
+from isakoso.core.package import HTDOCS_DIR
 
 
-HTDOCS_INDEX_FILE = STATIC_DIR / "index.html"
-HTDOC_OPENAPI_FILE = STATIC_DIR / "openapi.json"
+HTDOCS_INDEX_FILE = HTDOCS_DIR / "index.html"
+HTDOC_OPENAPI_FILE = HTDOCS_DIR / "openapi.json"
 
 client = TestClient(app)
 
