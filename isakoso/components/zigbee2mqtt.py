@@ -20,6 +20,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any
+from typing import Callable
 
 import paho.mqtt.client as mqtt
 
@@ -214,7 +215,8 @@ class Zigbee2MQTT:
     if raw is None:
       raise DeviceNotFoundError(f"Zigbee2MQTT device not found: {name}")
 
-    definition: dict = raw.get("definition") if isinstance(raw.get("definition"), dict) else {}  # pyright: ignore
+    raw_definition = raw.get("definition")
+    definition: dict[str, Any] = raw_definition if isinstance(raw_definition, dict) else {}
     capabilities = []
     properties = sorted(set(self.operations.get(name, {})) | set(self.states.get(name, {})))
 
@@ -432,8 +434,11 @@ class Zigbee2MQTT:
 
     definition = device.get("definition")
 
-    if isinstance(definition, dict) and isinstance(definition.get("exposes"), list):
-      return definition["exposes"]
+    if isinstance(definition, dict):
+      def_exposes = definition.get("exposes")
+
+      if isinstance(def_exposes, list):
+        return def_exposes
 
     return None
 
@@ -742,7 +747,13 @@ class Zigbee2MQTT:
       if self._state_topics.get(topic) == device_name:
         continue
 
-      self.mqtt.subscribe(topic, lambda payload, name=device_name: self._update_device_state(name, payload))
+      def make_handler(name: str) -> Callable[[bytes], None]:
+        def handler(payload: bytes) -> None:
+          self._update_device_state(name, payload)
+
+        return handler
+
+      self.mqtt.subscribe(topic, make_handler(device_name))
 
     for topic in set(self._state_topics) - set(next_topics):
       self.mqtt.unsubscribe(topic)

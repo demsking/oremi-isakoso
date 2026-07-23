@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import cast
+
 from fastapi import FastAPI
 from fastapi import Request
 
@@ -23,4 +25,4 @@ def set_app_context_mqtt(app: FastAPI, value: MQTTService) -> None:
 
 
 def get_app_context_mqtt(request: Request) -> MQTTService:
-  return request.app.state.mqtt
+  return cast(MQTTService, request.app.state.mqtt)

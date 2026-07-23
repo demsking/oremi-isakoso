@@ -110,7 +110,7 @@ class Settings(BaseSettings):
 
   @field_validator("mqtt_broker", mode="before")
   @classmethod
-  def validate_mqtt_broker(cls, value):
+  def validate_mqtt_broker(cls, value: str | None) -> str | None:
     """Normalize the MQTT broker to the hostname expected by Paho."""
     if value and isinstance(value, str):
       value = value.strip().rstrip("/")
@@ -127,7 +127,7 @@ class Settings(BaseSettings):
 
   @field_validator("mqtt_tls_ca_cert")
   @classmethod
-  def validate_tls_cert(cls, value):
+  def validate_tls_cert(cls, value: str | None) -> str | None:
     """Validate TLS certificate file exists if provided."""
     if value and not os.path.isfile(value):
       raise ValueError(f"MQTT TLS CA certificate file not found: {value}")
