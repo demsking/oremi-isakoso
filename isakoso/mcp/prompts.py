@@ -28,11 +28,7 @@ def register_mcp_prompts(mcp: FastMCP) -> None:
       Field(description="The command or request to execute on the smart home devices, e.g., 'turn off the living room light'."),
     ],
   ) -> list[PromptMessage]:
-    """Assist the user in managing and controlling smart home devices.
-
-    This prompt guides the agent to resolve device references in the command,
-    inspect capability requirements, and then execute the corresponding actions.
-    """
+    """Assist the user in managing and controlling smart home devices."""
     return [
       PromptMessage(
         role="user",
@@ -41,7 +37,7 @@ def register_mcp_prompts(mcp: FastMCP) -> None:
           text=(
             f"The user wants to perform the following action: {command}\n\n"
             "Please execute this command by following these steps:\n"
-            "1. Resolve any mentioned devices to their IDs using `extract_devices_from_user_request`.\n"
+            "1. Resolve any mentioned devices to their IDs using `search_devices`.\n"
             "2. If no devices match, ask the user for clarification.\n"
             "3. For each matched device, check its capabilities and latest state.\n"
             "4. Call the appropriate device-control tool (e.g. `turn_on`, `turn_off`, `set_brightness`, etc.) to execute the action.\n"

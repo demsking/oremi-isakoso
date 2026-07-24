@@ -51,13 +51,13 @@ def register_mcp_tools(mcp: FastMCP, registry: DeviceRegistry) -> None:
 
     Call this only when the user wants to list all devices or when you need to see the
     entire home layout. Avoid calling this for targeting specific devices; instead,
-    use extract_devices_from_user_request to look up devices mentioned in user requests.
+    use search_devices to look up devices mentioned in user requests.
     """
     provider_val = provider.value if provider is not None else None
     return await registry.list_devices(provider_val)
 
   @mcp.tool(annotations=READ_ONLY)
-  async def extract_devices_from_user_request(
+  async def search_devices(
     user_request: Annotated[
       str,
       Field(

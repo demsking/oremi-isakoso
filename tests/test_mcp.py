@@ -76,7 +76,7 @@ async def test_mcp_exposes_complete_discoverable_tool_contract(mcp_server):
 
   assert {tool.name for tool in tools} == {
     "list_devices",
-    "extract_devices_from_user_request",
+    "search_devices",
     "get_device",
     "get_device_state",
     "turn_on",
@@ -118,26 +118,26 @@ async def test_mcp_tools_return_structured_results(mcp_server):
 @pytest.mark.asyncio
 async def test_mcp_search_devices(mcp_server):
   # Test searching for a device
-  results = await mcp_server.call_tool("extract_devices_from_user_request", {"user_request": "lamp"})
+  results = await mcp_server.call_tool("search_devices", {"user_request": "lamp"})
   assert results[1]["result"][0]["id"] == "fake:lamp"
 
   # Test searching for a sensor property
-  results = await mcp_server.call_tool("extract_devices_from_user_request", {"user_request": "temp"})
+  results = await mcp_server.call_tool("search_devices", {"user_request": "temp"})
   assert results[1]["result"][0]["id"] == "fake:lamp"
 
   # Test non-matching query
-  results = await mcp_server.call_tool("extract_devices_from_user_request", {"user_request": "nonexistent"})
+  results = await mcp_server.call_tool("search_devices", {"user_request": "nonexistent"})
   assert results[1]["result"] == []
 
   # Test empty query
-  results = await mcp_server.call_tool("extract_devices_from_user_request", {"user_request": ""})
+  results = await mcp_server.call_tool("search_devices", {"user_request": ""})
   assert results[1]["result"] == []
 
 
 @pytest.mark.asyncio
 async def test_mcp_hybrid_search(mcp_server):
   # Test searching/extracting with natural language command containing typos
-  results = await mcp_server.call_tool("extract_devices_from_user_request", {"user_request": "turn on the lmp please"})
+  results = await mcp_server.call_tool("search_devices", {"user_request": "turn on the lmp please"})
   assert results[1]["result"][0]["id"] == "fake:lamp"
 
 
