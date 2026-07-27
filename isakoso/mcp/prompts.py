@@ -21,14 +21,17 @@ from pydantic import Field
 
 
 def register_mcp_prompts(mcp: FastMCP) -> None:
-  @mcp.prompt()
+  @mcp.prompt(
+    name="control_devices",
+    title="Control Devices",
+    description="Assist the user in managing and controlling smart home devices.",
+  )
   def control_devices(
     command: Annotated[
       str,
       Field(description="The command or request to execute on the smart home devices, e.g., 'turn off the living room light'."),
     ],
   ) -> list[PromptMessage]:
-    """Assist the user in managing and controlling smart home devices."""
     return [
       PromptMessage(
         role="user",
@@ -47,9 +50,12 @@ def register_mcp_prompts(mcp: FastMCP) -> None:
       )
     ]
 
-  @mcp.prompt()
+  @mcp.prompt(
+    name="summarize_devices",
+    title="Summarize Devices",
+    description="Assist in providing a summary of the current status of all smart home devices.",
+  )
   def summarize_devices() -> list[PromptMessage]:
-    """Assist in providing a summary of the current status of all smart home devices."""
     return [
       PromptMessage(
         role="user",

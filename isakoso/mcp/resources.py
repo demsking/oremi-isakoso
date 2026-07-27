@@ -22,17 +22,32 @@ from isakoso.core.devices import DeviceState
 
 
 def register_mcp_resources(mcp: FastMCP, registry: DeviceRegistry) -> None:
-  @mcp.resource("device:///all", mime_type="application/json")
+  @mcp.resource(
+    "device:///all",
+    name="list_devices_resource",
+    title="List Devices Resource",
+    description="Get the list of all registered devices and their capabilities.",
+    mime_type="application/json",
+  )
   async def list_devices_resource() -> list[Device]:
-    """Get the list of all registered devices and their capabilities."""
     return await registry.list_devices()
 
-  @mcp.resource("device:///{device_id}/metadata", mime_type="application/json")
+  @mcp.resource(
+    "device:///{device_id}/metadata",
+    name="get_device_resource",
+    title="Get Device Resource",
+    description="Get metadata and capabilities for a specific device.",
+    mime_type="application/json",
+  )
   async def get_device_resource(device_id: str) -> Device:
-    """Get metadata and capabilities for one device."""
     return await registry.get_device(unquote(device_id))
 
-  @mcp.resource("device:///{device_id}/state", mime_type="application/json")
+  @mcp.resource(
+    "device:///{device_id}/state",
+    name="get_device_state_resource",
+    title="Get Device State Resource",
+    description="Get the current state for a specific device.",
+    mime_type="application/json",
+  )
   async def get_device_state_resource(device_id: str) -> DeviceState:
-    """Get the current state for a specific device."""
     return await registry.get_device_state(unquote(device_id))
