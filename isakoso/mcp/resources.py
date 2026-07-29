@@ -14,14 +14,14 @@
 # ==============================================================================
 from urllib.parse import unquote
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from isakoso.core.devices import Device
 from isakoso.core.devices import DeviceRegistry
 from isakoso.core.devices import DeviceState
 
 
-def register_mcp_resources(mcp: FastMCP, registry: DeviceRegistry) -> None:
+def register_mcp_resources(mcp: MCPServer, registry: DeviceRegistry) -> None:
   @mcp.resource(
     "device:///all",
     name="list_devices_resource",

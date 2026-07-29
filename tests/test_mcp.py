@@ -16,7 +16,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from isakoso.core.app import create_app
 from isakoso.core.devices import Device
@@ -63,7 +63,7 @@ class FakeProvider:
 def mcp_server():
   registry = DeviceRegistry()
   registry.register(FakeProvider())
-  mcp = FastMCP(name="Oremi Iṣakoso Test")
+  mcp = MCPServer(name="Oremi Iṣakoso Test")
   register_mcp_prompts(mcp)
   register_mcp_resources(mcp, registry)
   register_mcp_tools(mcp, registry)
@@ -93,15 +93,15 @@ async def test_mcp_exposes_complete_discoverable_tool_contract(mcp_server):
   }
 
   brightness = next(tool for tool in tools if tool.name == "set_brightness")
-  assert brightness.inputSchema["properties"]["brightness"]["minimum"] == 0
-  assert brightness.inputSchema["properties"]["brightness"]["maximum"] == 100
-  assert brightness.outputSchema is not None
+  assert brightness.input_schema["properties"]["brightness"]["minimum"] == 0
+  assert brightness.input_schema["properties"]["brightness"]["maximum"] == 100
+  assert brightness.output_schema is not None
 
   list_devices_tool = next(tool for tool in tools if tool.name == "list_devices")
-  provider_schema = list_devices_tool.inputSchema["properties"]["provider"]
+  provider_schema = list_devices_tool.input_schema["properties"]["provider"]
   # Ensure the provider schema references the Provider Enum definitions and can be null
   assert any("$ref" in sub and "Provider" in sub["$ref"] for sub in provider_schema.get("anyOf", []))
-  assert list_devices_tool.inputSchema["$defs"]["Provider"]["enum"] == ["zigbee2mqtt"]
+  assert list_devices_tool.input_schema["$defs"]["Provider"]["enum"] == ["zigbee2mqtt"]
 
 
 @pytest.mark.asyncio
@@ -110,16 +110,16 @@ async def test_mcp_tools_return_structured_results(mcp_server):
   reading = await mcp_server.call_tool("read_sensor", {"device_id": "fake:lamp", "sensor": "temperature"})
   action = await mcp_server.call_tool("turn_off", {"device_id": "fake:lamp"})
 
-  assert listed[1]["result"][0]["id"] == "fake:lamp"
-  assert reading[1] == {"device_id": "fake:lamp", "sensor": "temperature", "value": 21.5, "unit": "°C"}
-  assert action[1]["operation"] == "turn_off"
+  assert listed.structured_content["result"][0]["id"] == "fake:lamp"
+  assert reading.structured_content == {"device_id": "fake:lamp", "sensor": "temperature", "value": 21.5, "unit": "°C"}
+  assert action.structured_content["operation"] == "turn_off"
 
 
 @pytest.mark.asyncio
 async def test_mcp_list_devices_compact_and_detailed(mcp_server):
   # Default (detailed=False) returns compact DeviceSummary format
   compact_res = await mcp_server.call_tool("list_devices", {})
-  device_summary = compact_res[1]["result"][0]
+  device_summary = compact_res.structured_content["result"][0]
   assert device_summary["id"] == "fake:lamp"
   assert "capabilities" in device_summary
   assert isinstance(device_summary["capabilities"], list)
@@ -127,7 +127,7 @@ async def test_mcp_list_devices_compact_and_detailed(mcp_server):
 
   # Detailed (detailed=True) returns full Device format
   detailed_res = await mcp_server.call_tool("list_devices", {"detailed": True})
-  device_full = detailed_res[1]["result"][0]
+  device_full = detailed_res.structured_content["result"][0]
   assert device_full["id"] == "fake:lamp"
   assert "manufacturer" in device_full
   assert isinstance(device_full["capabilities"][0], dict)
@@ -212,7 +212,7 @@ async def test_mcp_resources(mcp_server):
 
   # Test listing resource templates
   templates = await mcp_server.list_resource_templates()
-  assert {t.uriTemplate for t in templates} == {"device:///{device_id}/metadata", "device:///{device_id}/state"}
+  assert {t.uri_template for t in templates} == {"device:///{device_id}/metadata", "device:///{device_id}/state"}
 
   # Test reading device:///all resource
   contents_all = await mcp_server.read_resource("device:///all")

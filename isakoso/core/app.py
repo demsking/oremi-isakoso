@@ -21,7 +21,7 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from isakoso.api import docs
 from isakoso.api import health
@@ -81,7 +81,6 @@ def create_app(settings: Settings) -> FastAPI:
       else:
         logger.info("Zigbee startup skipped: MQTT is disabled")
 
-      _ = mcp.streamable_http_app()
       async with mcp.session_manager.run():
         ready = True
         logger.info(
@@ -125,16 +124,14 @@ def create_app(settings: Settings) -> FastAPI:
     ],
   )
 
-  mcp = FastMCP(
+  mcp = MCPServer(
     name="Oremi Iṣakoso",
     instructions=(
       "Discover and control smart-home devices. Call list_devices before control operations, "
       "use the returned provider-scoped device id, and inspect capabilities before choosing a tool."
     ),
-    stateless_http=True,
-    json_response=True,
-    streamable_http_path="/mcp",
     website_url=APP_DOCUMENTATION_URL,
+    version=APP_VERSION,
   )
 
   @app.exception_handler(Exception)
@@ -155,6 +152,10 @@ def create_app(settings: Settings) -> FastAPI:
   register_mcp_resources(mcp, device_registry)
   register_mcp_tools(mcp, device_registry)
 
-  app.mount(settings.api_prefix, mcp.streamable_http_app(), name="mcp")
+  app.mount(
+    name="mcp",
+    path=settings.api_prefix,
+    app=mcp.streamable_http_app(streamable_http_path="/mcp", stateless_http=True, json_response=True),
+  )
 
   return app

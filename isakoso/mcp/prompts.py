@@ -14,13 +14,11 @@
 # ==============================================================================
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
-from mcp.types import PromptMessage
-from mcp.types import TextContent
+from mcp.server import MCPServer
 from pydantic import Field
 
 
-def register_mcp_prompts(mcp: FastMCP) -> None:
+def register_mcp_prompts(mcp: MCPServer) -> None:
   @mcp.prompt(
     name="control_devices",
     title="Control Devices",
@@ -31,43 +29,27 @@ def register_mcp_prompts(mcp: FastMCP) -> None:
       str,
       Field(description="The command or request to execute on the smart home devices, e.g., 'turn off the living room light'."),
     ],
-  ) -> list[PromptMessage]:
-    return [
-      PromptMessage(
-        role="user",
-        content=TextContent(
-          type="text",
-          text=(
-            f"The user wants to perform the following action: {command}\n\n"
-            "Please execute this command by following these steps:\n"
-            "1. Resolve any mentioned devices to their IDs using `search_devices`.\n"
-            "2. If no devices match, ask the user for clarification.\n"
-            "3. For each matched device, check its capabilities and latest state.\n"
-            "4. Call the appropriate device-control tool (e.g. `turn_on`, `turn_off`, `set_brightness`, etc.) to execute the action.\n"
-            "5. Confirm the action succeeded."
-          ),
-        ),
-      )
-    ]
+  ) -> str:
+    return (
+      f"The user wants to perform the following action: {command}\n\n"
+      "Please execute this command by following these steps:\n"
+      "1. Resolve any mentioned devices to their IDs using `search_devices`.\n"
+      "2. If no devices match, ask the user for clarification.\n"
+      "3. For each matched device, check its capabilities and latest state.\n"
+      "4. Call the appropriate device-control tool (e.g. `turn_on`, `turn_off`, `set_brightness`, etc.) to execute the action.\n"
+      "5. Confirm the action succeeded."
+    )
 
   @mcp.prompt(
     name="summarize_devices",
     title="Summarize Devices",
     description="Assist in providing a summary of the current status of all smart home devices.",
   )
-  def summarize_devices() -> list[PromptMessage]:
-    return [
-      PromptMessage(
-        role="user",
-        content=TextContent(
-          type="text",
-          text=(
-            "Please provide a comprehensive summary of all smart home devices and their current states.\n\n"
-            "To do this:\n"
-            "1. Call `list_devices` to discover all registered devices.\n"
-            "2. For each device, retrieve its latest state using `get_device_state`.\n"
-            "3. Summarize their current status (e.g. which lights are ON, what the sensor readings are) in a clear, friendly format."
-          ),
-        ),
-      )
-    ]
+  def summarize_devices() -> str:
+    return (
+      "Please provide a comprehensive summary of all smart home devices and their current states.\n\n"
+      "To do this:\n"
+      "1. Call `list_devices` to discover all registered devices.\n"
+      "2. For each device, retrieve its latest state using `get_device_state`.\n"
+      "3. Summarize their current status (e.g. which lights are ON, what the sensor readings are) in a clear, friendly format."
+    )

@@ -16,7 +16,7 @@ from enum import Enum
 from typing import Annotated
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -34,11 +34,11 @@ class Provider(str, Enum):
   ZIGBEE2MQTT = "zigbee2mqtt"
 
 
-READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True)
-MUTATION = ToolAnnotations(destructiveHint=False)
+READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True)
+MUTATION = ToolAnnotations(destructive_hint=False)
 
 
-def register_mcp_tools(mcp: FastMCP, registry: DeviceRegistry) -> None:
+def register_mcp_tools(mcp: MCPServer, registry: DeviceRegistry) -> None:
   """Build the MCP transport while keeping tools independent from any radio protocol."""
 
   @mcp.tool(
