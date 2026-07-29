@@ -1,11 +1,11 @@
 #
 ## Stage 1: Builder
-FROM python:3.12-alpine3.21 AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ENV UV_LINK_MODE=copy
 
-# Set the shell to /bin/ash and enable pipefail
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+# Set the shell to /bin/bash and enable pipefail
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -17,24 +17,25 @@ WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --no-dev --locked --no-install-project --compile-bytecode
+    uv sync --no-dev --locked --no-install-project --compile-bytecode \
+      && find /app/.venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true \
+      && find /app/.venv -type d \( -name "tests" -o -name "test" -o -name "testing" \) -exec rm -rf {} + 2>/dev/null || true \
+      && find /app/.venv -type f \( -name "*.pyc" -o -name "*.pyo" -o -name "*.exe" \) -delete 2>/dev/null || true
 
 #
 ## Stage 2: Final
-FROM python:3.12-alpine3.21
+FROM python:3.12-slim-bookworm
 
-# Set the shell to /bin/ash and enable pipefail
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+# Set the shell to /bin/bash and enable pipefail
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
-RUN apk add --no-cache curl
-RUN adduser -D -h /oremi oremi && mkdir -p /oremi/data
+RUN useradd -m -d /oremi oremi && mkdir -p /oremi/data
 
 WORKDIR /oremi
 
 COPY --from=builder /app/.venv /oremi/.venv
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
-COPY --chown=oremi:oremi DOCUMENTATION.md pyproject.toml LICENSE ./
+COPY --chown=oremi:oremi pyproject.toml LICENSE DOCUMENTATION.md ./
 COPY --chown=oremi:oremi htdocs/ ./htdocs/
 COPY --chown=oremi:oremi isakoso/ ./isakoso/
 
@@ -44,11 +45,13 @@ ENV PYTHONUNBUFFERED="1"
 
 ENV OREMI_ISAKOSO_LOG_LEVEL="INFO"
 ENV OREMI_ISAKOSO_SERVER_HOST="0.0.0.0"
+ENV OREMI_ISAKOSO_EMBEDDING_CACHE_DIR="/oremi/data"
 
 VOLUME /oremi/data
 
 EXPOSE 5089
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD prefix="${OREMI_ISAKOSO_API_PREFIX:-/}"; prefix="/${prefix#/}"; prefix="${prefix%/}"; curl -fsS "http://127.0.0.1:${OREMI_ISAKOSO_SERVER_PORT:-5040}${prefix}/health/" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; prefix='${OREMI_ISAKOSO_API_PREFIX}'.strip('/'); url=f'http://localhost:${OREMI_ISAKOSO_SERVER_PORT}/' + (prefix + '/' if prefix else '') + 'health/'; urllib.request.urlopen(url)" || exit 1
 
 CMD ["python", "/oremi/isakoso"]

@@ -12,15 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Literal
-
 from fastapi import APIRouter
-from fastapi import Request
 from pydantic import BaseModel
 from pydantic import Field
 
 from isakoso.core.package import APP_VERSION
-from isakoso.utils.context import get_app_context_mqtt
 
 
 API_TAG_METADATA = {
@@ -36,9 +32,7 @@ router = APIRouter(prefix="/health", tags=[API_TAG_METADATA["name"]])
 
 
 class ServerStatus(BaseModel):
-  status: Literal["ok", "degraded"] = Field()
   version: str = Field(..., description="Version of the application.")
-  mqtt: str = Field(..., description="MQTT connection status.")
 
 
 @router.get(
@@ -46,8 +40,7 @@ class ServerStatus(BaseModel):
   summary="Health check",
   description=(
     "Return a lightweight health response for load balancers, Docker health checks, and monitoring tools. "
-    "The response confirms the API is alive and includes the application version, active AI model, backend "
-    "type, and whether encrypted storage is enabled."
+    "The response confirms the API is alive and includes the application version."
   ),
   responses={
     200: {
@@ -55,9 +48,7 @@ class ServerStatus(BaseModel):
         "application/json": {
           "example": ServerStatus.model_validate(
             {
-              "status": "ok",
               "version": APP_VERSION,
-              "mqtt": "connected",
             }
           )
         }
@@ -65,11 +56,5 @@ class ServerStatus(BaseModel):
     }
   },
 )
-async def health(request: Request) -> ServerStatus:
-  mqtt = get_app_context_mqtt(request)
-
-  return ServerStatus(
-    status="ok" if mqtt.connected else "degraded",
-    version=APP_VERSION,
-    mqtt="connected" if mqtt.connected else "disconnected",
-  )
+async def health() -> ServerStatus:
+  return ServerStatus(version=APP_VERSION)

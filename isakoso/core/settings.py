@@ -12,14 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import logging
 import os
+import warnings
+from functools import cached_property
 from functools import lru_cache
+from pathlib import Path
+from typing import Any
 from typing import Literal
 
+from fastembed import TextEmbedding
 from pydantic import Field
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
+
+from isakoso.core.package import APP_NAME
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -48,6 +58,16 @@ class Settings(BaseSettings):
   )
 
   api_prefix: str = Field(default="/", description="API prefix for all endpoints.")
+
+  embedding_model: str = Field(
+    default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    description="FastEmbed model name used for semantic vector search.",
+  )
+
+  embedding_cache_dir: Path | None = Field(
+    default=None,
+    description="Directory path to store downloaded FastEmbed models. If not set, default system cache is used.",
+  )
 
   mqtt_broker: str | None = Field(
     default=None,
@@ -82,11 +102,6 @@ class Settings(BaseSettings):
     description="MQTT keepalive interval in seconds. Must be at least 10. Default: 60.",
   )
 
-  mqtt_tls_enabled: bool = Field(
-    default=False,
-    description="Enable TLS/SSL for MQTT connection. Default: false.",
-  )
-
   mqtt_tls_ca_cert: str | None = Field(
     default=None,
     description="Path to CA certificate file for MQTT TLS verification.",
@@ -97,13 +112,19 @@ class Settings(BaseSettings):
     description="Base MQTT topic used by Zigbee2MQTT. A trailing slash is added automatically.",
   )
 
-  embedding_model: str = Field(
-    default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-    description="FastEmbed model name used for semantic vector search.",
-  )
-
-  log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(default="INFO", description="Logging level.")
+  log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(default="INFO", description="Logging level.")  # pyrefly: ignore [bad-assignment]
   log_file: str | None = Field(default=None, description="Path to rotating log file.")
+
+  @cached_property
+  def embedding_model_instance(self) -> TextEmbedding:
+    """Lazy singleton loader for FastEmbed TextEmbedding model."""
+    with warnings.catch_warnings():
+      warnings.filterwarnings(
+        "ignore",
+        category=UserWarning,
+        message=".*sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2.*",
+      )
+      return TextEmbedding(model_name=self.embedding_model, cache_dir=str(self.embedding_cache_dir))
 
   @field_validator("api_prefix")
   @classmethod
@@ -112,6 +133,20 @@ class Settings(BaseSettings):
       raise ValueError("OREMI_ISAKOSO_API_PREFIX must start with '/'")
 
     return value.rstrip("/") or "/"
+
+  @field_validator("embedding_cache_dir", mode="before")
+  @classmethod
+  def validate_embedding_cache_dir(cls, value: object) -> Path:
+    if value is not None:
+      if isinstance(value, str) and value:
+        return Path(value)
+
+      if isinstance(value, Path):
+        return value
+
+      raise ValueError("OREMI_ISAKOSO_EMBEDDING_CACHE_DIR must be a non-empty string")
+
+    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / APP_NAME
 
   @field_validator("mqtt_broker", mode="before")
   @classmethod
@@ -150,8 +185,39 @@ class Settings(BaseSettings):
     return f"{prefix}/"
 
 
-
 @lru_cache
 def get_settings() -> Settings:
   """Return cached application settings."""
   return Settings()
+
+
+def _format(value: Any) -> str:
+  if value is None:
+    return "None"
+
+  if isinstance(value, Path):
+    return str(value)
+
+  if isinstance(value, list):
+    return ",".join(str(item) for item in value)
+
+  return str(value)
+
+
+SENSITIVE_FIELDS = {"mqtt_password", "mqtt_tls_ca_cert"}
+
+
+def log_group(settings: Settings, name: str, *fields: str) -> None:
+  """Log a group of related settings without exposing sensitive credentials."""
+  values: list[str] = []
+
+  for field in fields:
+    value = getattr(settings, field)
+    if field in SENSITIVE_FIELDS and value:
+      formatted_val = "[set]"
+    else:
+      formatted_val = _format(value)
+
+    values.append(f"{field}={formatted_val}")
+
+  logger.info("%s settings: %s", name, " ".join(values))

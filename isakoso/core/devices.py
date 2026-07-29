@@ -19,6 +19,7 @@ from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
 
+from fastembed import TextEmbedding
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -153,9 +154,9 @@ class DeviceProvider(Protocol):
 class DeviceRegistry:
   """Routes provider-neutral operations to independently pluggable providers."""
 
-  def __init__(self) -> None:
+  def __init__(self, model: TextEmbedding) -> None:
     self._providers: dict[str, DeviceProvider] = {}
-    self._search_engine = VectorSearchEngine()
+    self._search_engine = VectorSearchEngine(model)
     self._background_tasks: set[asyncio.Task[None]] = set()
 
   def register(self, provider: DeviceProvider) -> None:

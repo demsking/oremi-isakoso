@@ -61,7 +61,7 @@ class FakeProvider:
 
 @pytest.fixture
 def mcp_server():
-  registry = DeviceRegistry()
+  registry = DeviceRegistry(Settings().embedding_model_instance)
   registry.register(FakeProvider())
   mcp = MCPServer(name="Oremi Iṣakoso Test")
   register_mcp_prompts(mcp)
@@ -133,7 +133,6 @@ async def test_mcp_list_devices_compact_and_detailed(mcp_server):
   assert isinstance(device_full["capabilities"][0], dict)
 
 
-
 @pytest.mark.asyncio
 async def test_device_search_accuracy():
   d1 = Device(
@@ -182,7 +181,7 @@ async def test_device_search_accuracy():
     async def execute_action(self, device_id, action, value):
       pass
 
-  registry = DeviceRegistry()
+  registry = DeviceRegistry(Settings().embedding_model_instance)
   registry.register(TestProvider())
 
 

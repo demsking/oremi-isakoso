@@ -67,7 +67,7 @@ uv tool install oremi-isakoso
 #### Install with pip
 
 ```sh
-python -m pip install oremi-isakoso
+pip install oremi-isakoso
 ```
 
 #### Usage
@@ -91,17 +91,24 @@ Docker image is officially available on Docker Hub, supporting both
 `linux/amd64` and `linux/arm64` platforms. The image exposes port `5089`, which
 serves the REST API and the interactive documentation.
 
-The interactive documentation can be accessed at `http://localhost:5089/docs`
+The interactive documentation can be accessed at `http://localhost:5089/docs/`
 and allows testing available endpoints directly from the browser.
 
-### Volumes
+### Docker Volume
 
-Oremi Iṣakoso is largely stateless and does not require persistent storage for
-normal operation.
+The Docker image defines a persistent volume at `/oremi/data`.
 
-The Docker image does not define any persistent volumes. If you configure file
-logging by setting `OREMI_ISAKOSO_LOG_FILE` to a location inside the container,
-mount a host directory to preserve log files across container recreation.
+This directory is used as the default storage location for:
+
+- **FastEmbed Model Cache**: Downloaded model weights for semantic vector search
+  (`OREMI_ISAKOSO_EMBEDDING_CACHE_DIR`). Mounting this volume prevents
+  re-downloading model files when the container is recreated.
+- **Application Logs**: Rotating log files if `OREMI_ISAKOSO_LOG_FILE` is
+  configured to write to a path inside `/oremi/data` (e.g.,
+  `/oremi/data/isakoso.log`).
+
+Mounting a volume or host directory to `/oremi/data` is recommended to maintain
+cache persistence across container restarts.
 
 ### Deploy with Docker
 
@@ -114,6 +121,7 @@ docker run -d \
   --name oremi-isakoso \
   --env-file <path_to_env_file> \
   -p 5089:5089 \
+  -v oremi-isakoso-data:/oremi/data \
   demsking/oremi-isakoso
 ```
 
@@ -134,10 +142,10 @@ services:
       - mosquitto
     ports:
       - 5089:5089
+    volumes:
+      - oremi-isakoso-data:/oremi/data
     environment:
       OREMI_ISAKOSO_MQTT_BROKER: mosquitto
-    env_file:
-      - .env
 
   mosquitto:
     image: eclipse-mosquitto
@@ -157,6 +165,7 @@ services:
       - dialout
 
 volumes:
+  oremi-isakoso-data:
   zigbee2mqtt-data:
 ```
 
@@ -169,7 +178,7 @@ docker compose up -d
 Once started, open the interactive documentation at:
 
 ```txt
-http://localhost:35089/docs/
+http://localhost:5089/docs/
 ```
 
 ## Model Context Protocol
@@ -220,45 +229,37 @@ a `.env` file.
 
 ### Server
 
-- `SERVER_HOST`: bind address; default `0.0.0.0`.
-- `SERVER_PORT`: bind port; default `5089`.
-- `API_PREFIX`: optional route prefix; default `/`.
+- `OREMI_ISAKOSO_SERVER_HOST`: bind address; default `0.0.0.0`.
+- `OREMI_ISAKOSO_SERVER_PORT`: bind port; default `5089`.
+- `OREMI_ISAKOSO_API_PREFIX`: optional route prefix; default `/`.
 
 ### Search & Embeddings
 
-- `EMBEDDING_MODEL`: FastEmbed model name for semantic vector search; default `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
+- `OREMI_ISAKOSO_EMBEDDING_MODEL`: FastEmbed model name for semantic vector search; default `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
+- `OREMI_ISAKOSO_EMBEDDING_CACHE_DIR`: optional directory path to store downloaded FastEmbed model weights; default `/oremi/data`.
 
 ### MQTT
 
-MQTT is disabled when `MQTT_BROKER` is unset.
+MQTT is disabled when `OREMI_ISAKOSO_MQTT_BROKER` is unset.
 
-- `MQTT_BROKER`: broker hostname or IP address, without a URL path.
-- `MQTT_PORT`: broker port; default `1883`.
-- `ZIGBEE2MQTT_TOPIC_PREFIX`: Zigbee2MQTT base topic; default `zigbee2mqtt/`.
+- `OREMI_ISAKOSO_MQTT_BROKER`: broker hostname or IP address, without a URL path.
+- `OREMI_ISAKOSO_MQTT_PORT`: broker port; default `1883`.
+- `OREMI_ISAKOSO_MQTT_CLIENT_ID`: optional client identifier.
+- `OREMI_ISAKOSO_MQTT_USERNAME` and `OREMI_ISAKOSO_MQTT_PASSWORD`: optional credentials.
+- `OREMI_ISAKOSO_MQTT_KEEPALIVE`: keepalive in seconds; default `60`.
+- `OREMI_ISAKOSO_MQTT_TLS_CA_CERT`: optional CA certificate path.
+
+### Zigbee2MQTT
+
+- `OREMI_ISAKOSO_ZIGBEE2MQTT_TOPIC_PREFIX`: Zigbee2MQTT base topic; default `zigbee2mqtt/`.
   Leading and trailing slashes are normalized, and MQTT wildcards are rejected.
-- `MQTT_CLIENT_ID`: optional client identifier.
-- `MQTT_USERNAME` and `MQTT_PASSWORD`: optional credentials.
-- `MQTT_KEEPALIVE`: keepalive in seconds; default `60`.
-- `MQTT_TLS_ENABLED`: enable TLS; default `false`.
-- `MQTT_TLS_CA_CERT`: optional CA certificate path.
 
 ### Logging
 
 - `OREMI_ISAKOSO_LOG_LEVEL`: Optional. Defaults to `INFO`. Logging level:
   `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
-- `OREMI_ISAKOSO_LOG_FILE`: Optional. Defaults to `oremi_isakoso.log`. Path to
+- `OREMI_ISAKOSO_LOG_FILE`: Optional. Defaults to unset (console logging only). Path to
   the rotating application log file.
-
-Example:
-
-```env
-OREMI_ISAKOSO_SERVER_HOST=0.0.0.0
-OREMI_ISAKOSO_SERVER_PORT=5089
-OREMI_ISAKOSO_MQTT_BROKER=mosquitto
-OREMI_ISAKOSO_MQTT_PORT=1883
-OREMI_ISAKOSO_ZIGBEE2MQTT_TOPIC_PREFIX=zigbee2mqtt/
-OREMI_ISAKOSO_LOG_LEVEL=INFO
-```
 
 ## Development
 

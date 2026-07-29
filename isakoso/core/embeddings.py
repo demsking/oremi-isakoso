@@ -20,26 +20,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 from fastembed import TextEmbedding
 
-from isakoso.core.settings import get_settings
-
 if TYPE_CHECKING:
   from isakoso.core.devices import Device
-
-
-_embedding_model_instance: TextEmbedding | None = None
-
-
-def get_embedding_model(model_name: str | None = None) -> TextEmbedding:
-  """Lazy singleton loader for FastEmbed TextEmbedding model."""
-  global _embedding_model_instance
-
-  if model_name is None:
-    model_name = get_settings().embedding_model
-
-  if _embedding_model_instance is None:
-    _embedding_model_instance = TextEmbedding(model_name=model_name)
-
-  return _embedding_model_instance
 
 
 def get_device_passages(device: Device) -> list[str]:
@@ -93,16 +75,9 @@ def _tokenize(text: str) -> set[str]:
 class VectorSearchEngine:
   """High-performance vector search engine for smart home devices using semantic embeddings."""
 
-  def __init__(
-    self,
-    devices: list[Device] | None = None,
-    model_name: str | None = None,
-  ) -> None:
-    self.model = get_embedding_model(model_name)
+  def __init__(self, model: TextEmbedding) -> None:
+    self.model = model
     self._cache: dict[str, tuple[Device, np.ndarray, set[str]]] = {}
-
-    if devices:
-      self.sync_devices(devices)
 
   def sync_devices(self, devices: list[Device]) -> None:
     """Synchronize the device vector index with a list of devices, embedding only new/changed devices."""

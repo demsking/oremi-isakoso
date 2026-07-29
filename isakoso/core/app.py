@@ -31,31 +31,23 @@ from isakoso.core.package import APP_DESCRIPTION
 from isakoso.core.package import APP_DOCUMENTATION_URL
 from isakoso.core.package import APP_NAME
 from isakoso.core.package import APP_VERSION
+from isakoso.core.settings import log_group
 from isakoso.core.settings import Settings
 from isakoso.mcp.prompts import register_mcp_prompts
 from isakoso.mcp.resources import register_mcp_resources
 from isakoso.mcp.tools import register_mcp_tools
 from isakoso.providers.zigbee2mqtt import Zigbee2MQTT
-from isakoso.utils.context import set_app_context_mqtt
 from isakoso.utils.logger import configure_logging
 
 
 logger = logging.getLogger(__name__)
 
 
-def log_startup_settings(settings: Settings) -> None:
-  """Log every configured application setting without exposing secrets."""
-  for name in settings.__class__.model_fields:
-    value = getattr(settings, name)
-    display_value = "[set]" if name in {"mqtt_password", "mqtt_tls_ca_cert"} and value else value
-    logger.info("Setting %s: %s", name, display_value)
-
-
 def create_app(settings: Settings) -> FastAPI:
   mqtt = MQTTService(settings)
   zigbee = Zigbee2MQTT(mqtt, settings.zigbee2mqtt_topic_prefix)
 
-  device_registry = DeviceRegistry()
+  device_registry = DeviceRegistry(settings.embedding_model_instance)
   device_registry.register(zigbee)
 
   @asynccontextmanager
@@ -66,9 +58,22 @@ def create_app(settings: Settings) -> FastAPI:
     configure_logging(settings.log_level, settings.log_file)
 
     logger.info(f"{APP_NAME} v{APP_VERSION}")
-    log_startup_settings(settings)
+    log_group(settings, "Server", "server_host", "server_port", "api_prefix")
+    log_group(settings, "Embedding", "embedding_model", "embedding_cache_dir")
+    log_group(
+      settings,
+      "MQTT",
+      "mqtt_broker",
+      "mqtt_port",
+      "mqtt_client_id",
+      "mqtt_username",
+      "mqtt_password",
+      "mqtt_keepalive",
+      "mqtt_tls_ca_cert",
+    )
 
-    set_app_context_mqtt(app, mqtt)
+    log_group(settings, "Zigbee2MQTT", "zigbee2mqtt_topic_prefix")
+    log_group(settings, "Logging", "log_level", "log_file")
 
     zigbee_started = False
 
@@ -141,7 +146,7 @@ def create_app(settings: Settings) -> FastAPI:
 
   @app.get("/", include_in_schema=False)
   async def redirect_to_docs() -> HTMLResponse:
-    return HTMLResponse(status_code=307, headers={"Location": prefix + docs.router.prefix})
+    return HTMLResponse(status_code=307, headers={"Location": prefix + docs.router.prefix + "/"})
 
   prefix = "" if settings.api_prefix == "/" else settings.api_prefix
 

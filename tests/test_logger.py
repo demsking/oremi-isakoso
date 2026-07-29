@@ -37,3 +37,18 @@ def test_configure_logging_suppresses_watchfiles_noise():
     root.setLevel(original_level)
     watchfiles_logger.setLevel(original_watchfiles_level)
     watchfiles_main_logger.setLevel(original_watchfiles_main_level)
+
+
+def test_log_group(caplog):
+  from isakoso.core.settings import Settings
+  from isakoso.core.settings import log_group
+
+  settings = Settings(mqtt_password="supersecretpassword")
+
+  with caplog.at_level(logging.INFO):
+    log_group(settings, "Server", "server_host", "server_port")
+    log_group(settings, "MQTT", "mqtt_broker", "mqtt_password")
+
+  assert "Server settings: server_host=127.0.0.1 server_port=5089" in caplog.text
+  assert "mqtt_password=[set]" in caplog.text
+  assert "supersecretpassword" not in caplog.text

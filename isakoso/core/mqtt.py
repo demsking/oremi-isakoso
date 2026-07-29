@@ -46,7 +46,7 @@ class MQTTService:
     if settings.mqtt_username:
       self.client.username_pw_set(settings.mqtt_username, settings.mqtt_password)
 
-    if settings.mqtt_tls_enabled:
+    if settings.mqtt_tls_ca_cert:
       self.client.tls_set(ca_certs=settings.mqtt_tls_ca_cert)
 
   @property
@@ -60,7 +60,7 @@ class MQTTService:
 
     logger.info(
       f"Starting MQTT connection: broker={self.settings.mqtt_broker}:{self.settings.mqtt_port} "
-      f"tls={self.settings.mqtt_tls_enabled}"
+      f"tls={self.settings.mqtt_tls_ca_cert or 'none'}"
     )
 
     self.loop = asyncio.get_running_loop()

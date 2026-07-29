@@ -18,6 +18,7 @@ from isakoso.core.devices import Device
 from isakoso.core.devices import DeviceCapability
 from isakoso.core.devices import DeviceRegistry
 from isakoso.core.embeddings import VectorSearchEngine
+from isakoso.core.settings import get_settings
 
 
 @pytest.fixture
@@ -46,7 +47,9 @@ def sample_devices():
     name="Thermomètre de la chambre",
     provider="zigbee2mqtt",
     manufacturer="Sonoff",
-    capabilities=[DeviceCapability(property="temperature", type="numeric", readable=True, description="Indoor temperature sensor")],
+    capabilities=[
+      DeviceCapability(property="temperature", type="numeric", readable=True, description="Indoor temperature sensor")
+    ],
   )
   d4 = Device(
     id="zigbee2mqtt:kitchen-plug",
@@ -57,30 +60,33 @@ def sample_devices():
   return [d1, d2, d3, d4]
 
 
-def test_vector_search_multilingual_english_to_french(sample_devices):
-  engine = VectorSearchEngine(sample_devices)
-  results = engine.search("turn on bedroom light")
+@pytest.fixture
+def vector_engine(sample_devices):
+  engine = VectorSearchEngine(get_settings().embedding_model_instance)
+  engine.sync_devices(sample_devices)
+  return engine
+
+
+def test_vector_search_multilingual_english_to_french(vector_engine):
+  results = vector_engine.search("turn on bedroom light")
   assert len(results) > 0
   assert results[0].id == "zigbee2mqtt:chambre-lumiere"
 
 
-def test_vector_search_multilingual_french_to_english(sample_devices):
-  engine = VectorSearchEngine(sample_devices)
-  results = engine.search("prise de la cuisine")
+def test_vector_search_multilingual_french_to_english(vector_engine):
+  results = vector_engine.search("prise de la cuisine")
   assert len(results) > 0
   assert results[0].id == "zigbee2mqtt:kitchen-plug"
 
 
-def test_vector_search_typo_resilience(sample_devices):
-  engine = VectorSearchEngine(sample_devices)
-  results = engine.search("livng room lmp")
+def test_vector_search_typo_resilience(vector_engine):
+  results = vector_engine.search("livng room lmp")
   assert len(results) > 0
   assert results[0].id == "zigbee2mqtt:living-room-lamp-1"
 
 
-def test_vector_search_capability(sample_devices):
-  engine = VectorSearchEngine(sample_devices)
-  results = engine.search("temperature sensor in bedroom")
+def test_vector_search_capability(vector_engine):
+  results = vector_engine.search("temperature sensor in bedroom")
   assert len(results) > 0
   assert results[0].id == "zigbee2mqtt:chambre-thermometre"
 
@@ -109,7 +115,8 @@ async def test_registry_search_devices(sample_devices):
       pass
 
   provider = DummyProvider()
-  registry = DeviceRegistry()
+  settings = get_settings()
+  registry = DeviceRegistry(settings.embedding_model_instance)
   registry.register(provider)
   await registry.sync_search_index()
 
