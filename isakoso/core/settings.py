@@ -97,6 +97,11 @@ class Settings(BaseSettings):
     description="Base MQTT topic used by Zigbee2MQTT. A trailing slash is added automatically.",
   )
 
+  embedding_model: str = Field(
+    default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    description="FastEmbed model name used for semantic vector search.",
+  )
+
   log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(default="INFO", description="Logging level.")
   log_file: str | None = Field(default=None, description="Path to rotating log file.")
 
@@ -144,18 +149,6 @@ class Settings(BaseSettings):
 
     return f"{prefix}/"
 
-  @property
-  def is_mqtt_enabled(self) -> bool:
-    """Check if MQTT is enabled (broker is configured)."""
-    return bool(self.mqtt_broker)
-
-  @property
-  def mqtt_credentials(self) -> tuple[str, str] | None:
-    """Get MQTT credentials as a tuple if both username and password are set."""
-    if self.mqtt_username and self.mqtt_password:
-      return (self.mqtt_username, self.mqtt_password)
-
-    return None
 
 
 @lru_cache

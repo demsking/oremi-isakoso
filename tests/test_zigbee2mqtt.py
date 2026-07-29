@@ -17,10 +17,10 @@ from typing import Any
 
 import pytest
 
-from isakoso.components.zigbee2mqtt import DEVICES_TOPIC
-from isakoso.components.zigbee2mqtt import Zigbee2MQTT
 from isakoso.core.devices import DeviceNotFoundError
 from isakoso.core.devices import UnsupportedOperationError
+from isakoso.providers.zigbee2mqtt import DEVICES_TOPIC
+from isakoso.providers.zigbee2mqtt import Zigbee2MQTT
 
 
 class FakeMQTTService:

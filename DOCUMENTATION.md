@@ -187,6 +187,7 @@ The MCP server uses the **Streamable HTTP transport** protocol and is mounted at
 ### Available MCP Tools
 
 - `list_devices(provider?, detailed?)`: discover registered devices in a compact summary format (or detailed format if `detailed=True`).
+- `search_devices(query)`: search registered devices using multilingual semantic vector embeddings (FastEmbed ONNX vector similarity + token boosting).
 - `get_device(device_id)`: inspect one device and its capability constraints.
 - `get_device_state(device_id)`: read the latest state received over MQTT.
 - `turn_on(device_id)`, `turn_off(device_id)`, `toggle(device_id)`: control switchable devices.
@@ -222,6 +223,10 @@ a `.env` file.
 - `SERVER_HOST`: bind address; default `0.0.0.0`.
 - `SERVER_PORT`: bind port; default `5089`.
 - `API_PREFIX`: optional route prefix; default `/`.
+
+### Search & Embeddings
+
+- `EMBEDDING_MODEL`: FastEmbed model name for semantic vector search; default `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
 
 ### MQTT
 

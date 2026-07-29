@@ -65,6 +65,24 @@ def register_mcp_tools(mcp: FastMCP, registry: DeviceRegistry) -> None:
 
     return devices
 
+  @mcp.tool(
+    name="search_devices",
+    title="Search Devices",
+    description="Search for registered devices using natural language or multilingual semantic vector queries.",
+    annotations=READ_ONLY,
+  )
+  async def search_devices(
+    query: Annotated[
+      str,
+      Field(
+        description="Natural language device query, description, or room name (e.g. 'bedroom light' or 'allumer la lumière')."
+      ),
+    ],
+  ) -> list[DeviceSummary]:
+    devices = await registry.search_devices(query)
+    return [device.to_summary() for device in devices]
+
+
 
   @mcp.tool(
     name="get_device",

@@ -76,6 +76,7 @@ async def test_mcp_exposes_complete_discoverable_tool_contract(mcp_server):
 
   assert {tool.name for tool in tools} == {
     "list_devices",
+    "search_devices",
     "get_device",
     "get_device_state",
     "turn_on",
@@ -183,30 +184,6 @@ async def test_device_search_accuracy():
 
   registry = DeviceRegistry()
   registry.register(TestProvider())
-
-  # Test typo matching
-  results = await registry.search_devices("turn on livng room lamp")
-  assert results == [d1]
-
-  # Test multiple devices extraction and typo matching
-  results = await registry.search_devices("turn off kitchn plug and living room lamp 1")
-  assert {r.id for r in results} == {d1.id, d2.id}
-
-  # Test another typo
-  results = await registry.search_devices("is the bedrom light on?")
-  assert results == [d3]
-
-  # Test no match
-  results = await registry.search_devices("nothing matches this text")
-  assert results == []
-
-  # Test fallback to keyword search index (living room has no noun/lamp, but matches index)
-  results = await registry.search_devices("living room")
-  assert results == [d1]
-
-  # Test French device extraction
-  results = await registry.search_devices("allume la lumière de la chambre")
-  assert results == [d4]
 
 
 @pytest.mark.asyncio

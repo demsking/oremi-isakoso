@@ -16,9 +16,7 @@ import json
 import logging
 import re
 import unicodedata
-from collections import OrderedDict
 from dataclasses import dataclass
-from difflib import SequenceMatcher
 from typing import Any
 from typing import Callable
 
@@ -33,9 +31,6 @@ from isakoso.core.devices import UnsupportedOperationError
 from isakoso.core.mqtt import MQTTService
 
 DEVICES_TOPIC = "zigbee2mqtt/bridge/devices"
-DEVICE_MATCH_THRESHOLD = 0.72
-DEVICE_SUGGESTION_THRESHOLD = 0.5
-DEVICE_MATCH_MARGIN = 0.1
 ZIGBEE_GET_ACCESS = 1
 ZIGBEE_SET_ACCESS = 2
 
@@ -92,23 +87,6 @@ class ZigbeeState:
   values: tuple[Any, ...] = ()
   unit: str | None = None
 
-  def as_catalog(self) -> dict[str, Any]:
-    data: dict[str, Any] = {
-      "property": self.property,
-      "type": self.type,
-    }
-
-    if self.description:
-      data["description"] = self.description
-
-    if self.values:
-      data["values"] = list(self.values)
-
-    if self.unit:
-      data["unit"] = self.unit
-
-    return data
-
 
 class Zigbee2MQTT:
   provider_id = "zigbee2mqtt"
@@ -125,9 +103,12 @@ class Zigbee2MQTT:
     self._state_topics: dict[str, str] = {}
     self._device_index_key: tuple[Any, ...] = ()
     self._device_aliases: list[tuple[str, str, str, str]] = []
-    self._device_catalog_key: tuple[Any, ...] = ()
-    self._device_catalog_cache: list[dict[str, Any]] = []
-    self._command_decision_cache: OrderedDict[str, Any] = OrderedDict()
+    self._on_devices_changed_listeners: list[Callable[[], Any]] = []
+
+  def on_devices_changed(self, callback: Callable[[], Any]) -> None:
+    """Register a listener callback to be notified when the device list changes."""
+    self._on_devices_changed_listeners.append(callback)
+
 
   def start(self) -> None:
     self.mqtt.subscribe(self.devices_topic, self._update_devices)
@@ -293,6 +274,12 @@ class Zigbee2MQTT:
 
       self._sync_state_subscriptions(devices)
       logger.info(f"Loaded {len(devices)} Zigbee devices")
+
+      for callback in list(self._on_devices_changed_listeners):
+        try:
+          callback()
+        except Exception as err:
+          logger.error(f"Error in on_devices_changed listener: {err}")
     except (json.JSONDecodeError, ValueError, TypeError) as exception:
       logger.warning(f"Ignoring invalid Zigbee device list: {exception}")
 
@@ -306,54 +293,9 @@ class Zigbee2MQTT:
 
     return name, name
 
-  def _device_catalog(self) -> list[dict[str, Any]]:
-    key = self._catalog_key()
-
-    if self._device_catalog_key == key:
-      return list(self._device_catalog_cache)
-
-    catalog = []
-
-    for device_name, device in self.devices.items():
-      friendly_name = str(device.get("friendly_name", ""))
-      operation_catalog = [operation.as_catalog() for operation in self.operations.get(device_name, {}).values()]
-      state_catalog = [state.as_catalog() for state in self.states.get(device_name, {}).values()]
-
-      if not operation_catalog and not state_catalog:
-        continue
-
-      catalog.append(
-        {
-          "name": device_name,
-          "mqtt_topic": friendly_name,
-          "model": device.get("model") or device.get("model_id"),
-          "manufacturer": device.get("manufacturer"),
-          "operations": operation_catalog,
-          "states": state_catalog,
-        }
-      )
-
-    self._device_catalog_key = key
-    self._device_catalog_cache = catalog
-
-    return list(catalog)
-
-  def _device_catalog_for(self, device_name: str) -> list[dict[str, Any]]:
-    normalized = self._normalize(device_name)
-
-    return [
-      device
-      for device in self._device_catalog()
-      if self._normalize(str(device.get("name") or "")) == normalized
-      or self._normalize(str(device.get("mqtt_topic") or "")) == normalized
-    ]
-
   def _invalidate_catalog_indexes(self) -> None:
     self._device_index_key = ()
     self._device_aliases = []
-    self._device_catalog_key = ()
-    self._device_catalog_cache = []
-    self._command_decision_cache.clear()
 
   def _index_key(self) -> tuple[Any, ...]:
     return tuple(
@@ -364,18 +306,6 @@ class Zigbee2MQTT:
           str(device.get("ieee_address") or ""),
         )
         for name, device in self.devices.items()
-      )
-    )
-
-  def _catalog_key(self) -> tuple[Any, ...]:
-    return tuple(
-      sorted(
-        (
-          name,
-          tuple(sorted(self.operations.get(name, {}))),
-          tuple(sorted(self.states.get(name, {}))),
-        )
-        for name in self.devices
       )
     )
 
@@ -574,142 +504,7 @@ class Zigbee2MQTT:
 
     return None
 
-  def _extract_device(self, texts: list[str]) -> tuple[str, str, str, float] | None:
-    normalized_texts = [self._normalize(text) for text in texts if text]
-    exact_matches = []
-    self._ensure_device_index()
 
-    for normalized_alias, bridge_name, device_name, alias_type in self._device_aliases:
-      if alias_type == "ieee_address":
-        continue
-
-      if any(self._contains_phrase(text, normalized_alias) for text in normalized_texts):
-        exact_matches.append((len(normalized_alias), bridge_name, device_name, f"{alias_type} exact", 1.0))
-
-    if exact_matches:
-      _, bridge_name, device_name, reason, score = max(exact_matches)
-      return bridge_name, device_name, reason, score
-
-    fuzzy_matches = self._device_candidates(normalized_texts)
-
-    if not fuzzy_matches or fuzzy_matches[0][0] < DEVICE_MATCH_THRESHOLD:
-      return None
-
-    best_score, bridge_name, device_name = fuzzy_matches[0]
-    runner_up_score = fuzzy_matches[1][0] if len(fuzzy_matches) > 1 else 0.0
-
-    logger.debug(f"Zigbee fuzzy device candidates: best={device_name!r}:{best_score:.2f} runner_up={runner_up_score:.2f}")
-
-    if best_score - runner_up_score < DEVICE_MATCH_MARGIN:
-      logger.warning(
-        f"Ambiguous Zigbee device name: best={device_name!r} score={best_score:.2f} runner_up_score={runner_up_score:.2f}"
-      )
-      return None
-
-    return bridge_name, device_name, "fuzzy", best_score
-
-  def _suggest_devices(self, texts: list[str]) -> list[str]:
-    candidates = self._device_candidates([self._normalize(text) for text in texts if text])
-
-    if not candidates or candidates[0][0] < DEVICE_SUGGESTION_THRESHOLD:
-      return []
-
-    best_score = candidates[0][0]
-
-    return [
-      device_name
-      for score, _, device_name in candidates[:3]
-      if score >= DEVICE_SUGGESTION_THRESHOLD and best_score - score <= DEVICE_MATCH_MARGIN
-    ]
-
-  def _device_candidates(self, normalized_texts: list[str]) -> list[tuple[float, str, str]]:
-    candidates = []
-    self._ensure_device_index()
-
-    by_device: dict[str, tuple[str, set[str]]] = {}
-
-    for alias, bridge_name, device_name, alias_type in self._device_aliases:
-      if alias_type == "ieee_address":
-        continue
-
-      _, aliases = by_device.setdefault(device_name, (bridge_name, set()))
-      aliases.add(alias)
-
-    for device_name, (bridge_name, aliases) in by_device.items():
-      score = max(
-        (self._device_similarity(text, alias) for text in normalized_texts for alias in aliases if alias),
-        default=0.0,
-      )
-      candidates.append((score, bridge_name, device_name))
-
-    return sorted(candidates, reverse=True)
-
-  def _device_similarity(self, text: str, alias: str) -> float:
-    ignored_words = {
-      "a",
-      "an",
-      "the",
-      "to",
-      "on",
-      "off",
-      "turn",
-      "switch",
-      "light",
-      "lamp",
-      "up",
-      "allume",
-      "allumer",
-      "de",
-      "du",
-      "la",
-      "lampe",
-      "lampes",
-      "le",
-      "les",
-      "lumiere",
-      "lumieres",
-    }
-    text_tokens = {word for word in text.split() if word not in ignored_words}
-    alias_tokens = {word for word in alias.split() if word not in ignored_words}
-    token_score = len(text_tokens & alias_tokens) / len(alias_tokens) if alias_tokens else 0.0
-    sequence_score = SequenceMatcher(None, text, alias).ratio()
-    return max(token_score, sequence_score)
-
-  def _device_exists(self, device_name: str) -> bool:
-    normalized = self._normalize(device_name)
-    self._ensure_device_index()
-
-    return any(alias == normalized for alias, _, _, alias_type in self._device_aliases if alias_type != "ieee_address")
-
-  def _available_device_names(self) -> list[str]:
-    return sorted(self.devices)
-
-  def _has_device_reference(self, texts: list[str]) -> bool:
-    device_words = {
-      "device",
-      "heater",
-      "interrupteur",
-      "lamp",
-      "lampe",
-      "light",
-      "lights",
-      "lumiere",
-      "lumieres",
-      "plug",
-      "prise",
-      "radiateur",
-      "switch",
-      "thermostat",
-    }
-
-    return any(set(self._normalize(text).split()) & device_words for text in texts if text)
-
-  def _requested_device_hint(self, texts: list[str]) -> str | None:
-    for text in texts:
-      if self._normalize(text):
-        return text
-
-    return None
 
   @staticmethod
   def _normalize(value: str) -> str:
@@ -728,9 +523,6 @@ class Zigbee2MQTT:
     except (TypeError, ValueError):
       return None
 
-  @staticmethod
-  def _contains_phrase(text: str, phrase: str) -> bool:
-    return f" {phrase} " in f" {text} "
 
   def _sync_state_subscriptions(self, devices: dict[str, dict[str, Any]]) -> None:
     next_topics = {}
@@ -783,38 +575,6 @@ class Zigbee2MQTT:
         cached[str(property_name)] = value
 
     self.device_states[device_name] = cached
-
-  async def _read_device_state(self, display_name: str, state_properties: Any) -> dict[str, Any]:
-    readable_states = self.states.get(display_name, {})
-    cached_state = self.device_states.get(display_name, {})
-    requested = self._validate_state_properties(display_name, state_properties)
-
-    if not requested:
-      requested = [property_name for property_name in readable_states if property_name in cached_state]
-
-    values = {property_name: cached_state[property_name] for property_name in requested if property_name in cached_state}
-
-    if not values:
-      return {"device": display_name, "required": ["state"]}
-
-    return {"device": display_name, "state": values}
-
-  def _validate_state_properties(self, display_name: str, state_properties: Any) -> list[str]:
-    if not isinstance(state_properties, list):
-      return []
-
-    readable_states = self.states.get(display_name, {})
-    requested = []
-
-    for property_name in state_properties:
-      normalized_property = str(property_name)
-
-      if normalized_property in readable_states and normalized_property not in requested:
-        requested.append(normalized_property)
-      else:
-        logger.warning(f"Ignoring unsupported Zigbee state for {display_name}: {property_name}")
-
-    return requested
 
   def _merge_device_state(self, display_name: str, values: dict[str, Any]) -> None:
     known_states = self.states.get(display_name, {})

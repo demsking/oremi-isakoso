@@ -25,7 +25,6 @@ from mcp.server.fastmcp import FastMCP
 
 from isakoso.api import docs
 from isakoso.api import health
-from isakoso.components.zigbee2mqtt import Zigbee2MQTT
 from isakoso.core.devices import DeviceRegistry
 from isakoso.core.mqtt import MQTTService
 from isakoso.core.package import APP_DESCRIPTION
@@ -36,6 +35,7 @@ from isakoso.core.settings import Settings
 from isakoso.mcp.prompts import register_mcp_prompts
 from isakoso.mcp.resources import register_mcp_resources
 from isakoso.mcp.tools import register_mcp_tools
+from isakoso.providers.zigbee2mqtt import Zigbee2MQTT
 from isakoso.utils.context import set_app_context_mqtt
 from isakoso.utils.logger import configure_logging
 
