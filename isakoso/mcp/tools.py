@@ -24,6 +24,7 @@ from isakoso.core.devices import ColorValue
 from isakoso.core.devices import Device
 from isakoso.core.devices import DeviceRegistry
 from isakoso.core.devices import DeviceState
+from isakoso.core.devices import DeviceSummary
 from isakoso.core.devices import OperationResult
 from isakoso.core.devices import SensorReading
 from isakoso.core.devices import UnsupportedOperationError
@@ -43,7 +44,7 @@ def register_mcp_tools(mcp: FastMCP, registry: DeviceRegistry) -> None:
   @mcp.tool(
     name="list_devices",
     title="List Devices",
-    description="List all registered devices and their readable and writable capabilities.",
+    description="List all registered devices in a compact summary format (or detailed format if detailed=True).",
     annotations=READ_ONLY,
   )
   async def list_devices(
@@ -51,29 +52,19 @@ def register_mcp_tools(mcp: FastMCP, registry: DeviceRegistry) -> None:
       Provider | None,
       Field(description="Optional provider filter, for example zigbee2mqtt. Omit to query every provider."),
     ] = None,
-  ) -> list[Device]:
+    detailed: Annotated[
+      bool,
+      Field(description="If True, return full device metadata and detailed capabilities. Defaults to False for a compact summary."),
+    ] = False,
+  ) -> list[DeviceSummary] | list[Device]:
     provider_val = provider.value if provider is not None else None
-    return await registry.list_devices(provider_val)
+    devices = await registry.list_devices(provider_val)
 
-  @mcp.tool(
-    name="search_devices",
-    title="Search Devices",
-    description="Resolve device names or descriptions mentioned in a user request to registered devices.",
-    annotations=READ_ONLY,
-  )
-  async def search_devices(
-    user_request: Annotated[
-      str,
-      Field(
-        description=(
-          "The user's raw request text, verbatim or lightly summarized. "
-          "Use the complete initial input when available to provide additional "
-          "context for device matching and disambiguation."
-        )
-      ),
-    ],
-  ) -> list[Device]:
-    return await registry.search_devices(user_request)
+    if not detailed:
+      return [device.to_summary() for device in devices]
+
+    return devices
+
 
   @mcp.tool(
     name="get_device",

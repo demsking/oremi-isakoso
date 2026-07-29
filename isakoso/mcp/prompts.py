@@ -40,7 +40,7 @@ def register_mcp_prompts(mcp: FastMCP) -> None:
           text=(
             f"The user wants to perform the following action: {command}\n\n"
             "Please execute this command by following these steps:\n"
-            "1. Resolve any mentioned devices to their IDs using `search_devices`.\n"
+            "1. Retrieve registered devices using `list_devices` and match any mentioned devices to their IDs.\n"
             "2. If no devices match, ask the user for clarification.\n"
             "3. For each matched device, check its capabilities and latest state.\n"
             "4. Call the appropriate device-control tool (e.g. `turn_on`, `turn_off`, `set_brightness`, etc.) to execute the action.\n"

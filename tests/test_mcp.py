@@ -76,7 +76,6 @@ async def test_mcp_exposes_complete_discoverable_tool_contract(mcp_server):
 
   assert {tool.name for tool in tools} == {
     "list_devices",
-    "search_devices",
     "get_device",
     "get_device_state",
     "turn_on",
@@ -116,29 +115,22 @@ async def test_mcp_tools_return_structured_results(mcp_server):
 
 
 @pytest.mark.asyncio
-async def test_mcp_search_devices(mcp_server):
-  # Test searching for a device
-  results = await mcp_server.call_tool("search_devices", {"user_request": "lamp"})
-  assert results[1]["result"][0]["id"] == "fake:lamp"
+async def test_mcp_list_devices_compact_and_detailed(mcp_server):
+  # Default (detailed=False) returns compact DeviceSummary format
+  compact_res = await mcp_server.call_tool("list_devices", {})
+  device_summary = compact_res[1]["result"][0]
+  assert device_summary["id"] == "fake:lamp"
+  assert "capabilities" in device_summary
+  assert isinstance(device_summary["capabilities"], list)
+  assert "manufacturer" not in device_summary
 
-  # Test searching for a sensor property
-  results = await mcp_server.call_tool("search_devices", {"user_request": "temp"})
-  assert results[1]["result"][0]["id"] == "fake:lamp"
+  # Detailed (detailed=True) returns full Device format
+  detailed_res = await mcp_server.call_tool("list_devices", {"detailed": True})
+  device_full = detailed_res[1]["result"][0]
+  assert device_full["id"] == "fake:lamp"
+  assert "manufacturer" in device_full
+  assert isinstance(device_full["capabilities"][0], dict)
 
-  # Test non-matching query
-  results = await mcp_server.call_tool("search_devices", {"user_request": "nonexistent"})
-  assert results[1]["result"] == []
-
-  # Test empty query
-  results = await mcp_server.call_tool("search_devices", {"user_request": ""})
-  assert results[1]["result"] == []
-
-
-@pytest.mark.asyncio
-async def test_mcp_hybrid_search(mcp_server):
-  # Test searching/extracting with natural language command containing typos
-  results = await mcp_server.call_tool("search_devices", {"user_request": "turn on the lmp please"})
-  assert results[1]["result"][0]["id"] == "fake:lamp"
 
 
 @pytest.mark.asyncio

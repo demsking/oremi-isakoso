@@ -53,6 +53,20 @@ class DeviceCapability(BaseModel):
   maximum: float | None = None
 
 
+class DeviceSummary(BaseModel):
+  """Lightweight summary of a smart-home device for quick listing."""
+
+  model_config = ConfigDict(extra="forbid")
+
+  id: str = Field(description="Stable provider-scoped identifier accepted by all device tools.")
+  name: str = Field(description="Human-readable device name.")
+  provider: str = Field(description="Provider that owns this device, for example zigbee2mqtt.")
+  capabilities: list[str] = Field(
+    default_factory=list,
+    description="List of capability property names exposed by the device, e.g. ['state', 'brightness'].",
+  )
+
+
 class Device(BaseModel):
   """Protocol-neutral description of a smart-home device."""
 
@@ -64,6 +78,14 @@ class Device(BaseModel):
   manufacturer: str | None = None
   model: str | None = None
   capabilities: list[DeviceCapability] = Field(default_factory=list)
+
+  def to_summary(self) -> DeviceSummary:
+    return DeviceSummary(
+      id=self.id,
+      name=self.name,
+      provider=self.provider,
+      capabilities=[cap.property for cap in self.capabilities],
+    )
 
 
 class DeviceState(BaseModel):

@@ -783,7 +783,6 @@ class Zigbee2MQTT:
         cached[str(property_name)] = value
 
     self.device_states[device_name] = cached
-    logger.debug(f"Zigbee state updated: device={device_name!r} keys={sorted(cached)}")
 
   async def _read_device_state(self, display_name: str, state_properties: Any) -> dict[str, Any]:
     readable_states = self.states.get(display_name, {})

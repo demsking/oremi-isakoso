@@ -186,22 +186,31 @@ The MCP server uses the **Streamable HTTP transport** protocol and is mounted at
 
 ### Available MCP Tools
 
-- `list_devices(provider?)`: discover devices and readable/writable capabilities.
-- `search_devices(query)`: search for devices using a hybrid of natural language
-  keyword extraction (handling typos/synonyms) and weighted keyword index search.
+- `list_devices(provider?, detailed?)`: discover registered devices in a compact summary format (or detailed format if `detailed=True`).
 - `get_device(device_id)`: inspect one device and its capability constraints.
 - `get_device_state(device_id)`: read the latest state received over MQTT.
-- `turn_on`, `turn_off`, `toggle`: control switchable devices.
+- `turn_on(device_id)`, `turn_off(device_id)`, `toggle(device_id)`: control switchable devices.
 - `set_brightness(device_id, brightness)`: set brightness from 0 to 100 percent.
 - `set_color(device_id, color)`: set `#RRGGBB` or complete RGB channels.
 - `set_color_temperature(device_id, temperature_kelvin)`: set 1000-10000 K.
 - `set_position(device_id, position)`: set a cover or blind from 0 to 100 percent.
-- `lock`, `unlock`: control lock-capable devices.
+- `lock(device_id)`, `unlock(device_id)`: control lock-capable devices.
 - `read_sensor(device_id, sensor)`: read one advertised sensor with its unit.
 - `execute_action(device_id, action, value)`: invoke another writable capability.
 
 Tool inputs and outputs have generated JSON schemas. Mutations are validated
 against the capabilities advertised by Zigbee2MQTT before MQTT publication.
+
+### Available MCP Resources
+
+- `device:///all`: list all registered devices and their capabilities.
+- `device:///{device_id}/metadata`: inspect metadata and capabilities for a specific device.
+- `device:///{device_id}/state`: read the current state of a specific device.
+
+### Available MCP Prompts
+
+- `control_devices(command)`: guide an agent through resolving, checking, and executing a device control request.
+- `summarize_devices()`: guide an agent through fetching device states and generating a status summary report.
 
 ## Configuration
 
