@@ -188,10 +188,20 @@ async def test_device_search_accuracy():
 @pytest.mark.asyncio
 async def test_mcp_prompts(mcp_server):
   prompts = await mcp_server.list_prompts()
-  assert {prompt.name for prompt in prompts} == {"control_devices", "summarize_devices"}
+  assert {prompt.name for prompt in prompts} == {
+    "turn_on_device",
+    "turn_off_device",
+    "toggle_device",
+    "set_device_brightness",
+    "set_device_color",
+    "set_device_color_temperature",
+    "read_sensor",
+    "execute_action",
+    "summarize_devices",
+  }
 
-  # Test control_devices prompt
-  result_control = await mcp_server.get_prompt("control_devices", {"command": "turn on the lamp"})
+  # Test turn_on_device prompt
+  result_control = await mcp_server.get_prompt("turn_on_device", {"command": "turn on the lamp"})
   assert len(result_control.messages) == 1
   assert result_control.messages[0].role == "user"
   assert "turn on the lamp" in result_control.messages[0].content.text

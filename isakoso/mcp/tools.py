@@ -214,11 +214,15 @@ def register_mcp_tools(mcp: MCPServer, registry: DeviceRegistry) -> None:
   ) -> SensorReading:
     device = await registry.get_device(device_id)
     capability = next((item for item in device.capabilities if item.property == sensor and item.readable), None)
+
     if capability is None:
       raise UnsupportedOperationError(f"{device.name} does not expose readable sensor {sensor!r}")
+
     state = await registry.get_device_state(device_id)
+
     if sensor not in state.values:
       raise UnsupportedOperationError(f"{device.name} has not reported sensor {sensor!r} yet")
+
     return SensorReading(device_id=device.id, sensor=sensor, value=state.values[sensor], unit=capability.unit)
 
   @mcp.tool(

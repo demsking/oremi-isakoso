@@ -1,5 +1,3 @@
-## Oremi Iṣakoso
-
 **Oremi Iṣakoso** is an MCP server for smart home control. It exposes
 Zigbee2MQTT devices through the Model Context Protocol (MCP), enabling AI
 assistants and autonomous agents to discover, monitor, and control connected
@@ -219,7 +217,14 @@ against the capabilities advertised by Zigbee2MQTT before MQTT publication.
 
 ### Available MCP Prompts
 
-- `control_devices(command)`: guide an agent through resolving, checking, and executing a device control request.
+- `turn_on_device(command)`: guide an agent through resolving, checking, and turning on a device.
+- `turn_off_device(command)`: guide an agent through resolving, checking, and turning off a device.
+- `toggle_device(command)`: guide an agent through resolving, checking, and toggling a device state.
+- `set_device_brightness(command)`: guide an agent through setting the brightness of a device.
+- `set_device_color(command)`: guide an agent through setting the color of a device.
+- `set_device_color_temperature(command)`: guide an agent through setting the color temperature of a device.
+- `read_sensor(command)`: guide an agent through resolving and reading a sensor value.
+- `execute_action(command)`: guide an agent through executing an action on a device.
 - `summarize_devices()`: guide an agent through fetching device states and generating a status summary report.
 
 ## Configuration
