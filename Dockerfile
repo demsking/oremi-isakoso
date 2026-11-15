@@ -51,7 +51,7 @@ VOLUME /oremi/data
 
 EXPOSE 5089
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5m --retries=3 \
   CMD python -c "import urllib.request; prefix='${OREMI_ISAKOSO_API_PREFIX}'.strip('/'); url=f'http://localhost:${OREMI_ISAKOSO_SERVER_PORT}/' + (prefix + '/' if prefix else '') + 'health/'; urllib.request.urlopen(url)" || exit 1
 
 CMD ["python", "/oremi/isakoso"]
