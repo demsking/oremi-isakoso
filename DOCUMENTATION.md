@@ -297,6 +297,13 @@ a `.env` file.
 - `OREMI_ISAKOSO_EMBEDDING_MODEL`: FastEmbed model name for semantic vector search; default `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
 - `OREMI_ISAKOSO_EMBEDDING_CACHE_DIR`: optional directory path to store downloaded FastEmbed model weights; default `/oremi/data`.
 
+Hugging Face downloads of public models generally do not require authentication.
+Set `HF_TOKEN` to a Hugging Face user access token when using a private or gated
+model, or when the Hub requires authentication for the download. Use a token
+with read access only. Provide it through your deployment's protected secret
+configuration; do not commit the token to the repository or store it in a
+version-controlled Compose/Stack file.
+
 ### MQTT
 
 MQTT is disabled when `OREMI_ISAKOSO_MQTT_BROKER` is unset.
