@@ -157,6 +157,11 @@ redeploy the stack. Persisting `/oremi/data` avoids downloading the model again
 after a task is recreated, provided the mounted storage is shared by all nodes
 where Swarm may schedule the service.
 
+The image sets `HF_HUB_DISABLE_XET=1` to use the standard Hugging Face download
+path instead of Xet. This can help in environments where Xet/CAS downloads fail.
+To let Hugging Face Hub use Xet, override the variable in the service
+environment with `HF_HUB_DISABLE_XET: "0"`.
+
 ### Deploy with Docker
 
 Use the official Docker image
