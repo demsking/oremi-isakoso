@@ -111,7 +111,7 @@ image:
 
 image-test:
 	uv lock
-	docker build . \
+	docker --context default build . \
 	  --progress plain \
 	  --tag $(IMAGE_NAME):test
 
