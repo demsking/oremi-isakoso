@@ -160,7 +160,12 @@ def create_app(settings: Settings) -> FastAPI:
   app.mount(
     name="mcp",
     path=settings.api_prefix,
-    app=mcp.streamable_http_app(streamable_http_path="/mcp", stateless_http=True, json_response=True),
+    app=mcp.streamable_http_app(
+      streamable_http_path="/mcp",
+      stateless_http=True,
+      json_response=True,
+      host=settings.server_host,
+    ),
   )
 
   return app
