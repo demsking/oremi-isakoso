@@ -108,6 +108,55 @@ This directory is used as the default storage location for:
 Mounting a volume or host directory to `/oremi/data` is recommended to maintain
 cache persistence across container restarts.
 
+### Memory requirements
+
+The default multilingual embedding model needs substantially more memory than
+its on-disk size while FastEmbed and ONNX Runtime load it. Allocate at least
+**2 GiB per service task** as a starting point. The actual peak depends on the
+model and workload; monitor the container and increase the limit if it
+approaches the limit or is killed with exit code `137` / an out-of-memory (OOM)
+event. Leave additional memory available on each node for the operating system
+and other services.
+
+For Docker Swarm, declare both a reservation and a limit so the scheduler can
+account for the task's memory and the container has room for startup peaks:
+
+```yaml
+deploy:
+  resources:
+    reservations:
+      memory: 1G
+    limits:
+      memory: 2G
+```
+
+For a standalone container, the equivalent limit is `docker run --memory 2g`.
+
+### Slow model downloads and healthcheck startup period
+
+The image healthcheck allows five minutes for the application to become
+healthy. If the model download or initialization takes longer, override the
+healthcheck in the Compose/Stack file; this does not require rebuilding the
+image. For example, to allow 15 minutes:
+
+```yaml
+healthcheck:
+  test:
+    - CMD
+    - python
+    - -c
+    - "import urllib.request; urllib.request.urlopen('http://localhost:5089/health/')"
+  interval: 30s
+  timeout: 5s
+  start_period: 15m
+  retries: 3
+```
+
+Adjust the URL if you configure a different server port or API prefix, then
+redeploy the stack. Persisting `/oremi/data` avoids downloading the model again
+after a task is recreated, provided the mounted storage is shared by all nodes
+where Swarm may schedule the service.
+
 ### Deploy with Docker
 
 Use the official Docker image
